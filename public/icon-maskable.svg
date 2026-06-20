@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#101010"/>
-  <text x="256" y="330" font-family="Inter, Arial, sans-serif" font-size="232" font-weight="900" letter-spacing="-10" text-anchor="middle" fill="#fafafa">M</text>
-  <rect x="196" y="360" width="120" height="16" rx="8" fill="#2f6df6"/>
+  <path d="M150 350 L150 168 L256 300 L362 168 L362 350" fill="none" stroke="#fafafa" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="186" y="386" width="140" height="20" rx="10" fill="#2f6df6"/>
 </svg>
