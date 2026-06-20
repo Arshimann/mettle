@@ -8,3 +8,4 @@ export { EmptyState } from './EmptyState';
 export { Sheet } from './Sheet';
 export { Stepper } from './Stepper';
 export { CountUp } from './CountUp';
+export { Sortable } from './Sortable';
