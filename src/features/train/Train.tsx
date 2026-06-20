@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Check, Dumbbell, Plus, Trash2 } from 'lucide-react';
+import { Award, Calculator, Check, Dumbbell, Plus, Trash2 } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, PageHeader, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { cn } from '../../lib/cn';
@@ -13,7 +13,9 @@ import { fmtWeight, loadIncrement, unitLabel } from '../../lib/units';
 import { fmtDuration } from '../../lib/date';
 import { RestTimer } from './RestTimer';
 import { FinishSheet } from './FinishSheet';
+import { ExerciseTools } from './ExerciseTools';
 import { Confetti } from './Confetti';
+import type { WarmupSet } from '../../lib/plates';
 
 function Celebration({
   result,
@@ -59,6 +61,7 @@ export function Train() {
   const [finishOpen, setFinishOpen] = useState(false);
   const [celebration, setCelebration] = useState<EndSessionResult | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [tools, setTools] = useState<{ ei: number; name: string; target: number } | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
 
   useEffect(() => {
@@ -166,6 +169,22 @@ export function Train() {
   const startRest = (secs: number) =>
     update((s) => ({ ...s, restEndsAt: Date.now() + secs * 1000, restDuration: secs }));
 
+  const addWarmup = (ei: number, sets: WarmupSet[]) =>
+    update((s) => ({
+      ...s,
+      exercises: s.exercises.map((ex, i) =>
+        i !== ei
+          ? ex
+          : {
+              ...ex,
+              sets: [
+                ...sets.map((w) => ({ weight: String(w.weight), reps: String(w.reps), done: false })),
+                ...ex.sets,
+              ],
+            },
+      ),
+    }));
+
   const toggleDone = (ei: number, si: number) => {
     let becameDone = false;
     update((s) => {
@@ -215,20 +234,32 @@ export function Train() {
           const suggestKg = suggestNextKg(history, ex.name, units);
           const weightPlaceholder = suggestKg != null ? String(fmtWeight(suggestKg, units)) : '0';
           const repsPlaceholder = lp ? String(lp.top.reps) : '0';
+          const entered = ex.sets.map((s) => parseFloat(s.weight)).filter((n) => !isNaN(n));
+          const toolTarget = entered.length
+            ? Math.max(...entered)
+            : suggestKg != null
+              ? Number(fmtWeight(suggestKg, units))
+              : 0;
           return (
             <Card key={`${ex.name}-${ei}`}>
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-lg truncate">{ex.name}</h3>
-                <button
-                  onClick={() => {
-                    haptics.tap();
-                    removeExercise(ei);
-                  }}
-                  className="w-8 h-8 grid place-items-center text-fg-subtle shrink-0"
-                  aria-label={`Remove ${ex.name}`}
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex items-center shrink-0">
+                  <button
+                    onClick={() => { haptics.tap(); setTools({ ei, name: ex.name, target: toolTarget }); }}
+                    className="w-8 h-8 grid place-items-center text-fg-subtle"
+                    aria-label={`Tools for ${ex.name}`}
+                  >
+                    <Calculator size={16} />
+                  </button>
+                  <button
+                    onClick={() => { haptics.tap(); removeExercise(ei); }}
+                    className="w-8 h-8 grid place-items-center text-fg-subtle"
+                    aria-label={`Remove ${ex.name}`}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 mb-3 text-[13px]">
@@ -357,6 +388,17 @@ export function Train() {
         exclude={session.exercises.map((e) => e.name)}
       />
       <FinishSheet open={finishOpen} onClose={() => setFinishOpen(false)} onConfirm={handleConfirmFinish} />
+      <ExerciseTools
+        open={!!tools}
+        onClose={() => setTools(null)}
+        exerciseName={tools?.name ?? ''}
+        initialTarget={tools?.target ?? 0}
+        units={units}
+        onAddWarmup={(sets) => {
+          if (tools) addWarmup(tools.ei, sets);
+          setTools(null);
+        }}
+      />
     </div>
   );
 }
