@@ -67,10 +67,10 @@ export function Onboarding() {
             >
               {key === 'welcome' && (
                 <div className="text-center">
-                  <div className="w-16 h-16 rounded-[18px] bg-accent text-accent-fg grid place-items-center font-black text-3xl mx-auto mb-6 shadow-pop">
+                  <div className="w-16 h-16 rounded-[18px] bg-accent text-accent-fg grid place-items-center font-brand font-normal text-[44px] mx-auto mb-6 shadow-pop pt-1">
                     {APP_NAME[0]}
                   </div>
-                  <h1 className="text-4xl mb-3">{APP_NAME}</h1>
+                  <h1 className="font-brand font-normal text-5xl tracking-normal mb-3">{APP_NAME}</h1>
                   <p className="text-lg text-fg-muted leading-snug max-w-[20rem] mx-auto">
                     {APP_TAGLINE} Build your split, log every set, and watch the numbers climb.
                   </p>

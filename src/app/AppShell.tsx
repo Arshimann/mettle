@@ -1,4 +1,4 @@
-import { useEffect, useRef, type TouchEvent } from 'react';
+import { useRef, type TouchEvent } from 'react';
 import { ChevronLeft, Settings as SettingsIcon } from 'lucide-react';
 import { APP_NAME } from '../config';
 import { cn } from '../lib/cn';
@@ -61,10 +61,12 @@ function Header() {
             }}
             className="flex items-center gap-2"
           >
-            <span className="w-7 h-7 rounded-[9px] bg-accent text-accent-fg grid place-items-center font-black text-[15px]">
+            <span className="w-8 h-8 rounded-[9px] bg-accent text-accent-fg grid place-items-center font-brand font-normal text-[20px] pt-0.5">
               {APP_NAME[0]}
             </span>
-            <span className="text-[17px] font-bold tracking-tight">{APP_NAME}</span>
+            <span className="font-brand font-normal text-[22px] tracking-normal leading-none pt-0.5">
+              {APP_NAME}
+            </span>
           </button>
         )}
 
@@ -89,12 +91,7 @@ export function AppShell() {
   const screen = useUI((s) => s.screen);
   const navigate = useUI((s) => s.navigate);
 
-  const curIdx = NAV_ORDER.indexOf(screen as never);
-  const prevIdx = useRef(curIdx);
-  const dir = curIdx === -1 || prevIdx.current === -1 ? 1 : curIdx >= prevIdx.current ? 1 : -1;
-  useEffect(() => {
-    prevIdx.current = curIdx;
-  }, [curIdx]);
+  const dir = useUI((s) => s.dir);
 
   // Lightweight swipe-between-tabs that doesn't interfere with scroll or taps.
   const touch = useRef<{ x: number; y: number } | null>(null);

@@ -31,6 +31,7 @@
 
   --font-sans: var(--font-sans-stack);
   --font-display: var(--font-display-stack);
+  --font-brand: var(--font-brand-stack);
 
   --ease-out: var(--ease);
 }
@@ -39,6 +40,8 @@
 :root {
   --font-sans-stack: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-display-stack: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Aggressive metal-band brand face — used ONLY by the logo/wordmark so the brand stands apart. */
+  --font-brand-stack: 'Metal Mania', 'Inter Variable', system-ui, cursive;
   --display-weight: 700;
   --display-tracking: -0.02em;
 }

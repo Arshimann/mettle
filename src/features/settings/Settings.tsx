@@ -204,7 +204,7 @@ export function Settings() {
 
       <Section title="About">
         <Card>
-          <div className="font-bold text-lg">{APP_NAME}</div>
+          <div className="font-brand font-normal text-2xl">{APP_NAME}</div>
           <div className="text-sm text-fg-muted">{APP_TAGLINE}</div>
           <div className="text-xs text-fg-subtle mt-2">Version 0.1 · Schema v{SCHEMA_VERSION}</div>
         </Card>
