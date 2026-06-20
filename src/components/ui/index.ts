@@ -6,3 +6,4 @@ export { Switch } from './Switch';
 export { PageHeader } from './PageHeader';
 export { EmptyState } from './EmptyState';
 export { Sheet } from './Sheet';
+export { Stepper } from './Stepper';

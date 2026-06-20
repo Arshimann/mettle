@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, Check, Dumbbell, Plus, Trash2 } from 'lucide-react';
-import { Button, Card, CardLabel, EmptyState, PageHeader } from '../../components/ui';
+import { Button, Card, CardLabel, EmptyState, PageHeader, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
@@ -9,7 +9,7 @@ import { listContainer, listItem } from '../../theme/motion';
 import { useStore, type EndSessionResult } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
 import { lastPerformance, suggestNextKg } from '../../lib/training';
-import { fmtWeight, unitLabel } from '../../lib/units';
+import { fmtWeight, loadIncrement, unitLabel } from '../../lib/units';
 import { fmtDuration } from '../../lib/date';
 import { RestTimer } from './RestTimer';
 import { FinishSheet } from './FinishSheet';
@@ -127,7 +127,11 @@ export function Train() {
   // ---- active session: the logger (session is non-null here) ----
   const elapsed = fmtDuration(Math.floor((nowTick - session.startedAt) / 1000));
 
-  const patchSet = (ei: number, si: number, patch: Partial<{ weight: string; reps: string; done: boolean }>) =>
+  const patchSet = (
+    ei: number,
+    si: number,
+    patch: Partial<{ weight: string; reps: string; done: boolean; toFailure: boolean }>,
+  ) =>
     update((s) => ({
       ...s,
       exercises: s.exercises.map((ex, i) =>
@@ -248,39 +252,42 @@ export function Train() {
 
               <div className="space-y-2">
                 {ex.sets.map((set, si) => (
-                  <div key={si} className="flex items-center gap-2">
-                    <span className="w-5 text-center text-sm font-bold text-fg-subtle tabular">{si + 1}</span>
-                    <input
-                      inputMode="decimal"
+                  <div key={si} className="flex items-center gap-1.5">
+                    <span className="w-4 text-center text-sm font-bold text-fg-subtle tabular shrink-0">{si + 1}</span>
+                    <Stepper
                       value={set.weight}
-                      onChange={(e) => patchSet(ei, si, { weight: e.target.value })}
+                      onChange={(v) => patchSet(ei, si, { weight: v })}
+                      step={loadIncrement(units)}
+                      decimal
                       placeholder={weightPlaceholder}
                       aria-label="Weight"
-                      className={cn(
-                        'flex-1 min-w-0 h-11 rounded-btn bg-surface-2 border text-center text-[15px] font-semibold outline-none transition-colors',
-                        set.done ? 'border-accent text-accent' : 'border-border focus:border-border-strong',
-                      )}
+                      className={set.done ? 'border-accent' : 'border-border'}
                     />
-                    <span className="text-fg-subtle text-sm">×</span>
-                    <input
-                      inputMode="numeric"
+                    <Stepper
                       value={set.reps}
-                      onChange={(e) => patchSet(ei, si, { reps: e.target.value })}
+                      onChange={(v) => patchSet(ei, si, { reps: v })}
+                      step={1}
                       placeholder={repsPlaceholder}
                       aria-label="Reps"
-                      className={cn(
-                        'flex-1 min-w-0 h-11 rounded-btn bg-surface-2 border text-center text-[15px] font-semibold outline-none transition-colors',
-                        set.done ? 'border-accent text-accent' : 'border-border focus:border-border-strong',
-                      )}
+                      className={set.done ? 'border-accent' : 'border-border'}
                     />
+                    <button
+                      onClick={() => { haptics.tap(); patchSet(ei, si, { toFailure: !set.toFailure }); }}
+                      aria-label="To failure"
+                      title="To failure"
+                      className={cn(
+                        'w-9 h-11 rounded-btn grid place-items-center shrink-0 border text-[13px] font-bold transition-colors',
+                        set.toFailure ? 'bg-accent-soft border-accent text-accent' : 'bg-surface-2 border-border text-fg-subtle',
+                      )}
+                    >
+                      F
+                    </button>
                     <button
                       onClick={() => toggleDone(ei, si)}
                       aria-label="Mark set done"
                       className={cn(
-                        'w-11 h-11 rounded-btn grid place-items-center shrink-0 border transition-colors',
-                        set.done
-                          ? 'bg-accent border-accent text-accent-fg'
-                          : 'bg-surface-2 border-border text-fg-subtle',
+                        'w-10 h-11 rounded-btn grid place-items-center shrink-0 border transition-colors',
+                        set.done ? 'bg-accent border-accent text-accent-fg' : 'bg-surface-2 border-border text-fg-subtle',
                       )}
                     >
                       <Check size={18} strokeWidth={3} />
@@ -318,6 +325,10 @@ export function Train() {
 
       <Button variant="outline" fullWidth className="mt-3" onClick={() => setPickerOpen(true)}>
         <Plus size={16} /> Add exercise
+      </Button>
+
+      <Button variant="accent" size="lg" fullWidth className="mt-3" onClick={() => setFinishOpen(true)}>
+        Finish workout
       </Button>
 
       <Button

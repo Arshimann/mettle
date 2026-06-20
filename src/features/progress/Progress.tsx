@@ -149,6 +149,7 @@ export function Progress() {
                             {ex.sets.map((s, j) => (
                               <span key={j} className="text-[12px] px-2 py-1 rounded-md bg-surface-2 text-fg-muted tabular">
                                 {fmtWeight(s.weight, units)}×{s.reps}
+                                {s.toFailure ? ' · F' : ''}
                               </span>
                             ))}
                           </div>
