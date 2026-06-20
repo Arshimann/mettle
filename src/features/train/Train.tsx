@@ -394,6 +394,9 @@ export function Train() {
         {confirmDiscard ? 'Tap again to discard' : 'Discard workout'}
       </Button>
 
+      {/* Clearance so the floating rest timer never covers the buttons above. */}
+      {session.restEndsAt && <div className="h-28" aria-hidden="true" />}
+
       <RestTimer />
       <ExercisePicker
         open={pickerOpen}

@@ -47,7 +47,7 @@ export function BottomNav() {
               </motion.span>
               <span
                 className={cn(
-                  'text-[10px] font-semibold tracking-tight',
+                  'text-[10px] font-semibold tracking-tight whitespace-nowrap',
                   active ? 'text-fg' : 'text-fg-subtle',
                 )}
               >
