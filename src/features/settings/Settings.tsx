@@ -4,29 +4,12 @@ import { APP_NAME, APP_TAGLINE, SCHEMA_VERSION } from '../../config';
 import { Button, Card, Segmented, Switch } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
+import { useUI } from '../../store/useUI';
 import { ThemePicker } from './ThemePicker';
+import type { SettingsSectionId } from './sections';
 import type { DisplayToggles } from '../../types';
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="mb-6">
-      <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-fg-subtle mb-2.5 px-1">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function Row({
-  label,
-  desc,
-  control,
-}: {
-  label: string;
-  desc?: string;
-  control: ReactNode;
-}) {
+function Row({ label, desc, control }: { label: string; desc?: string; control: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
       <div className="min-w-0">
@@ -58,6 +41,7 @@ function download(filename: string, text: string) {
 }
 
 export function Settings() {
+  const section = ((useUI((s) => s.params.section) as SettingsSectionId) || 'appearance');
   const settings = useStore((s) => s.settings);
   const setUnits = useStore((s) => s.setUnits);
   const updateSettings = useStore((s) => s.updateSettings);
@@ -87,28 +71,30 @@ export function Settings() {
   };
 
   return (
-    <div className="pb-4">
-      <Section title="Appearance">
-        <ThemePicker />
-        <Card className="mt-3">
-          <Row
-            label="Units"
-            desc="Used everywhere weights are shown"
-            control={
-              <Segmented
-                value={settings.units}
-                onChange={setUnits}
-                options={[
-                  { value: 'kg', label: 'kg' },
-                  { value: 'lbs', label: 'lbs' },
-                ]}
-              />
-            }
-          />
-        </Card>
-      </Section>
+    <div className="pb-4 space-y-3.5">
+      {section === 'appearance' && (
+        <>
+          <ThemePicker />
+          <Card>
+            <Row
+              label="Units"
+              desc="Used everywhere weights are shown"
+              control={
+                <Segmented
+                  value={settings.units}
+                  onChange={setUnits}
+                  options={[
+                    { value: 'kg', label: 'kg' },
+                    { value: 'lbs', label: 'lbs' },
+                  ]}
+                />
+              }
+            />
+          </Card>
+        </>
+      )}
 
-      <Section title="Feel">
+      {section === 'feel' && (
         <Card className="divide-y divide-border">
           <Row
             label="Haptics"
@@ -133,9 +119,9 @@ export function Settings() {
             }
           />
         </Card>
-      </Section>
+      )}
 
-      <Section title="Home screen">
+      {section === 'home' && (
         <Card className="divide-y divide-border">
           {(Object.keys(DISPLAY_LABELS) as (keyof DisplayToggles)[]).map((key) => (
             <Row
@@ -151,9 +137,9 @@ export function Settings() {
             />
           ))}
         </Card>
-      </Section>
+      )}
 
-      <Section title="Data">
+      {section === 'data' && (
         <Card className="space-y-2.5">
           <p className="text-sm text-fg-muted leading-relaxed">
             Your data lives on this device. Back it up or move it to another device with a file.
@@ -200,15 +186,15 @@ export function Settings() {
             <Trash2 size={16} /> {confirmReset ? 'Tap again to confirm' : 'Reset all data'}
           </Button>
         </Card>
-      </Section>
+      )}
 
-      <Section title="About">
+      {section === 'about' && (
         <Card>
           <div className="font-brand font-normal text-2xl">{APP_NAME}</div>
           <div className="text-sm text-fg-muted">{APP_TAGLINE}</div>
           <div className="text-xs text-fg-subtle mt-2">Version 0.1 · Schema v{SCHEMA_VERSION}</div>
         </Card>
-      </Section>
+      )}
 
       {toast && (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-[84px] z-50 bg-fg text-canvas text-sm font-medium px-4 py-2.5 rounded-btn shadow-pop">

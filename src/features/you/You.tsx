@@ -1,27 +1,17 @@
 import { motion } from 'framer-motion';
-import { Palette, Ruler, Settings as SettingsIcon } from 'lucide-react';
-import { Button, Card, CardLabel, PageHeader } from '../../components/ui';
+import { Palette, Ruler } from 'lucide-react';
+import { Card, CardLabel, PageHeader } from '../../components/ui';
 import { listContainer, listItem } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
-import { useUI } from '../../store/useUI';
 import { THEMES } from '../../theme/themes';
 
 export function You() {
   const settings = useStore((s) => s.settings);
-  const navigate = useUI((s) => s.navigate);
   const themeName = THEMES.find((t) => t.id === settings.theme)?.name ?? settings.theme;
 
   return (
     <motion.div variants={listContainer} initial="hidden" animate="show">
-      <PageHeader
-        title="You"
-        subtitle="Profile & tools"
-        action={
-          <Button size="sm" variant="surface" onClick={() => navigate('settings')}>
-            <SettingsIcon size={15} /> Settings
-          </Button>
-        }
-      />
+      <PageHeader title="You" subtitle="Profile & tools" />
 
       <motion.div variants={listItem} className="grid grid-cols-2 gap-3.5 mb-3.5">
         <Card className="p-4">
