@@ -43,6 +43,16 @@ export function Dashboard() {
   }).length;
   const streak = computeStreak(history);
   const last = history[0];
+  const weekVolume = history
+    .filter((h) => {
+      const d = daysBetween(h.date, today);
+      return d >= 0 && d < 7;
+    })
+    .reduce((v, h) => v + sessionVolume(h.exercises), 0);
+  const weekPRs = prs.filter((p) => {
+    const d = daysBetween(p.date, today);
+    return d >= 0 && d < 7;
+  }).length;
 
   return (
     <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3.5">
@@ -74,6 +84,28 @@ export function Dashboard() {
           <Stat value={history.length} label="Workouts" />
           <Stat value={thisWeek} label="This week" />
           <Stat value={prs.length} label="PRs" />
+        </motion.div>
+      )}
+
+      {display.weeklyRecap && history.length > 0 && (
+        <motion.div variants={listItem}>
+          <Card>
+            <CardLabel>This week</CardLabel>
+            <div className="grid grid-cols-3 gap-3 mt-1.5">
+              <div>
+                <div className="text-2xl font-bold tabular leading-none">{thisWeek}</div>
+                <div className="text-[11px] text-fg-subtle mt-1 font-semibold uppercase tracking-wider">Sessions</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold tabular leading-none">{Math.round(weekVolume).toLocaleString()}</div>
+                <div className="text-[11px] text-fg-subtle mt-1 font-semibold uppercase tracking-wider">{unitLabel(units)} vol</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold tabular leading-none">{weekPRs}</div>
+                <div className="text-[11px] text-fg-subtle mt-1 font-semibold uppercase tracking-wider">PRs</div>
+              </div>
+            </div>
+          </Card>
         </motion.div>
       )}
 
