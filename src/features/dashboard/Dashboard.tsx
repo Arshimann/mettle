@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion';
 import { ChevronRight, Dumbbell, Flame, Plus } from 'lucide-react';
-import { Button, Card, CardLabel } from '../../components/ui';
+import { Button, Card, CardLabel, CountUp } from '../../components/ui';
 import { listContainer, listItem, spring } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
 import { computeStreak, sessionVolume } from '../../lib/formulas';
 import { prettyDate, todayStr, daysBetween } from '../../lib/date';
 import { unitLabel } from '../../lib/units';
+import { DidYouKnow } from './DidYouKnow';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -16,10 +17,10 @@ function greeting(): string {
   return 'Good evening';
 }
 
-function Stat({ value, label }: { value: string | number; label: string }) {
+function Stat({ value, label }: { value: number; label: string }) {
   return (
     <Card className="p-4 text-center">
-      <div className="text-[28px] font-bold tabular leading-none tracking-tight">{value}</div>
+      <CountUp value={value} className="block text-[28px] font-bold tabular leading-none tracking-tight" />
       <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-fg-subtle mt-1.5">
         {label}
       </div>
@@ -93,15 +94,15 @@ export function Dashboard() {
             <CardLabel>This week</CardLabel>
             <div className="grid grid-cols-3 gap-3 mt-1.5">
               <div>
-                <div className="text-2xl font-bold tabular leading-none">{thisWeek}</div>
+                <CountUp value={thisWeek} className="block text-2xl font-bold tabular leading-none" />
                 <div className="text-[11px] text-fg-subtle mt-1 font-semibold uppercase tracking-wider">Sessions</div>
               </div>
               <div>
-                <div className="text-2xl font-bold tabular leading-none">{Math.round(weekVolume).toLocaleString()}</div>
+                <CountUp value={Math.round(weekVolume)} className="block text-2xl font-bold tabular leading-none" />
                 <div className="text-[11px] text-fg-subtle mt-1 font-semibold uppercase tracking-wider">{unitLabel(units)} vol</div>
               </div>
               <div>
-                <div className="text-2xl font-bold tabular leading-none">{weekPRs}</div>
+                <CountUp value={weekPRs} className="block text-2xl font-bold tabular leading-none" />
                 <div className="text-[11px] text-fg-subtle mt-1 font-semibold uppercase tracking-wider">PRs</div>
               </div>
             </div>
@@ -175,6 +176,12 @@ export function Dashboard() {
               {Math.round(sessionVolume(last.exercises)).toLocaleString()} {unitLabel(units)} volume
             </p>
           </Card>
+        </motion.div>
+      )}
+
+      {display.didYouKnow && (
+        <motion.div variants={listItem}>
+          <DidYouKnow />
         </motion.div>
       )}
     </motion.div>
