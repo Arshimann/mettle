@@ -185,15 +185,29 @@ export function Train() {
       ),
     }));
 
-  const toggleDone = (ei: number, si: number) => {
+  const toggleDone = (ei: number, si: number, wPh?: string, rPh?: string) => {
     let becameDone = false;
+    // When completing a set, accept the suggested/last values for any empty field
+    // so it always logs real numbers — important for to-failure sets and fast logging.
+    const fill = (cur: string, ph?: string) => (cur === '' && ph && ph !== '0' ? ph : cur);
     update((s) => {
       const set = s.exercises[ei].sets[si];
       becameDone = !set.done;
       return {
         ...s,
         exercises: s.exercises.map((ex, i) =>
-          i !== ei ? ex : { ...ex, sets: ex.sets.map((st, j) => (j !== si ? st : { ...st, done: becameDone })) },
+          i !== ei
+            ? ex
+            : {
+                ...ex,
+                sets: ex.sets.map((st, j) =>
+                  j !== si
+                    ? st
+                    : becameDone
+                      ? { ...st, done: true, weight: fill(st.weight, wPh), reps: fill(st.reps, rPh) }
+                      : { ...st, done: false },
+                ),
+              },
         ),
       };
     });
@@ -314,7 +328,7 @@ export function Train() {
                       F
                     </button>
                     <button
-                      onClick={() => toggleDone(ei, si)}
+                      onClick={() => toggleDone(ei, si, weightPlaceholder, repsPlaceholder)}
                       aria-label="Mark set done"
                       className={cn(
                         'w-10 h-11 rounded-btn grid place-items-center shrink-0 border transition-colors',
