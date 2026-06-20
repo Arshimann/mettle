@@ -3,7 +3,7 @@ import { Plus, Target, X } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, Segmented, Sheet } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
-import { bestE1RM, computeStreak } from '../../lib/formulas';
+import { computeStreak } from '../../lib/formulas';
 import { fromKg, parseNum, unitLabel } from '../../lib/units';
 import { daysBetween, todayStr } from '../../lib/date';
 import type { BodyWeightEntry, Goal, GoalType, HistoryEntry, Units } from '../../types';
@@ -23,10 +23,14 @@ function currentValue(goal: Goal, { history, bodyWeight, units }: GoalCtx): numb
     }
     case 'lift': {
       const lower = (goal.exercise ?? '').toLowerCase();
-      let best = 0;
+      let best = 0; // heaviest weight actually lifted = your PR for this lift
       history.forEach((h) =>
         h.exercises.forEach((e) => {
-          if (e.name.toLowerCase() === lower) best = Math.max(best, bestE1RM(e.sets));
+          if (e.name.toLowerCase() === lower) {
+            e.sets.forEach((s) => {
+              if (s.weight > best) best = s.weight;
+            });
+          }
         }),
       );
       return Math.round(fromKg(best, units));
@@ -71,7 +75,12 @@ export function Goals() {
     () =>
       goals.map((g) => {
         const current = currentValue(g, { history, bodyWeight, units });
-        const pct = g.target > 0 ? Math.min(1, current / g.target) : 0;
+        // Body-weight goals measure from where you started (can go up or down);
+        // lift/frequency/streak measure from 0 so your existing PR shows immediately.
+        const base = g.type === 'bodyweight' ? (g.baseValue ?? current) : 0;
+        const denom = g.target - base;
+        const pct =
+          denom !== 0 ? Math.max(0, Math.min(1, (current - base) / denom)) : current >= g.target ? 1 : 0;
         return { goal: g, current, pct };
       }),
     [goals, history, bodyWeight, units],
@@ -88,7 +97,9 @@ export function Goals() {
     else if (type === 'frequency') label = `${t}× per week`;
     else label = `${t}-day streak`;
 
-    addGoal({ type, target: t, label, exercise: type === 'lift' ? exercise.trim() : undefined });
+    const ex = type === 'lift' ? exercise.trim() : undefined;
+    const base = currentValue({ id: '', type, target: t, exercise: ex, label, createdAt: '' }, { history, bodyWeight, units });
+    addGoal({ type, target: t, label, exercise: ex, baseValue: base });
     haptics.success();
     setExercise('');
     setTarget('');
