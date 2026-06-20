@@ -13,6 +13,7 @@ import { Screen } from './Screen';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { Split } from '../features/split/Split';
 import { Train } from '../features/train/Train';
+import { Stretch } from '../features/stretch/Stretch';
 import { Progress } from '../features/progress/Progress';
 import { You } from '../features/you/You';
 import { Settings } from '../features/settings/Settings';
@@ -25,6 +26,8 @@ function renderScreen(screen: ScreenId) {
       return <Split />;
     case 'train':
       return <Train />;
+    case 'stretch':
+      return <Stretch />;
     case 'progress':
       return <Progress />;
     case 'you':
