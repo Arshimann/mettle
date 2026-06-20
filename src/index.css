@@ -1,0 +1,243 @@
+@import 'tailwindcss';
+
+/* ============================================================
+   THEME TOKENS
+   Semantic Tailwind utilities (bg-canvas, text-fg, bg-accent...)
+   resolve to runtime CSS variables, so swapping [data-theme]
+   on <html> re-skins the entire app with zero component changes.
+   ============================================================ */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-elevated: var(--elevated);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+  --radius-card: var(--radius);
+  --radius-btn: var(--radius-sm);
+
+  --shadow-card: var(--shadow-1);
+  --shadow-pop: var(--shadow-2);
+
+  --font-sans: var(--font-sans-stack);
+  --font-display: var(--font-display-stack);
+
+  --ease-out: var(--ease);
+}
+
+/* ---- Font stacks (shared) ---- */
+:root {
+  --font-sans-stack: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display-stack: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --display-weight: 700;
+  --display-tracking: -0.02em;
+}
+
+/* ============================================================
+   THEME: light — "Light & precise" (DEFAULT)
+   Bright, airy, Swiss-grid, crisp lines and type.
+   ============================================================ */
+:root,
+[data-theme='light'] {
+  --canvas: #fbfbf9;
+  --surface: #ffffff;
+  --surface-2: #f3f3ef;
+  --elevated: #ffffff;
+  --border: #e9e9e3;
+  --border-strong: #d6d6cd;
+  --fg: #15150f;
+  --fg-muted: #66665c;
+  --fg-subtle: #9a9a8e;
+  --accent: #2f6df6;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(47, 109, 246, 0.1);
+  --success: #16a06b;
+  --danger: #e5484d;
+  --warning: #d98a00;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-1: 0 1px 2px rgba(20, 20, 15, 0.04), 0 2px 8px rgba(20, 20, 15, 0.05);
+  --shadow-2: 0 6px 20px rgba(20, 20, 15, 0.07), 0 16px 40px rgba(20, 20, 15, 0.06);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 0.4s;
+  --glow: transparent;
+  --display-weight: 700;
+  --display-tracking: -0.025em;
+  color-scheme: light;
+}
+
+/* ============================================================
+   THEME: dark — "Deep premium dark"
+   Rich charcoal, soft depth/glow, buttery transitions.
+   ============================================================ */
+[data-theme='dark'] {
+  --canvas: #0b0b0e;
+  --surface: #141418;
+  --surface-2: #1d1d23;
+  --elevated: #1a1a20;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --fg: #f3f3f5;
+  --fg-muted: #a1a1ab;
+  --fg-subtle: #65656f;
+  --accent: #7c6cff;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(124, 108, 255, 0.16);
+  --success: #2dd4a7;
+  --danger: #ff5a5f;
+  --warning: #f5b545;
+  --radius: 16px;
+  --radius-sm: 11px;
+  --shadow-1: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 14px 44px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 0.45s;
+  --glow: radial-gradient(ellipse 70% 45% at 50% -8%, rgba(124, 108, 255, 0.12), transparent 60%);
+  --display-weight: 700;
+  --display-tracking: -0.025em;
+  color-scheme: dark;
+}
+
+/* ============================================================
+   THEME: editorial — "Monochrome editorial"
+   Warm paper, near-black ink, one sharp red accent, big type,
+   sharp corners, generous whitespace.
+   ============================================================ */
+[data-theme='editorial'] {
+  --canvas: #f5f3ec;
+  --surface: #fffefb;
+  --surface-2: #edeae0;
+  --elevated: #fffefb;
+  --border: #ddd9cc;
+  --border-strong: #14110b;
+  --fg: #0a0a08;
+  --fg-muted: #55524a;
+  --fg-subtle: #8b877c;
+  --accent: #e5341f;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(229, 52, 31, 0.1);
+  --success: #1f8a5b;
+  --danger: #c41e1e;
+  --warning: #b87503;
+  --radius: 3px;
+  --radius-sm: 2px;
+  --shadow-1: none;
+  --shadow-2: 0 2px 0 rgba(10, 10, 8, 0.05);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.5s;
+  --glow: transparent;
+  --display-weight: 800;
+  --display-tracking: -0.035em;
+  color-scheme: light;
+}
+
+/* ============================================================
+   THEME: bold — "Athletic & bold"
+   Near-black, high contrast, volt accent, heavy display type,
+   punchy spring motion.
+   ============================================================ */
+[data-theme='bold'] {
+  --canvas: #0a0a0a;
+  --surface: #151515;
+  --surface-2: #1f1f1f;
+  --elevated: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --fg: #ffffff;
+  --fg-muted: #b4b4b4;
+  --fg-subtle: #747474;
+  --accent: #d8ff2e;
+  --accent-fg: #0a0a0a;
+  --accent-soft: rgba(216, 255, 46, 0.14);
+  --success: #2dd4a7;
+  --danger: #ff4d4d;
+  --warning: #ffb020;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --shadow-1: 0 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 10px 34px rgba(0, 0, 0, 0.6);
+  --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur: 0.38s;
+  --glow: radial-gradient(ellipse 60% 40% at 50% -10%, rgba(216, 255, 46, 0.1), transparent 55%);
+  --display-weight: 900;
+  --display-tracking: -0.04em;
+  color-scheme: dark;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background: var(--canvas);
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  font-family: var(--font-sans-stack);
+  color: var(--fg);
+  background: var(--canvas);
+  background-image: var(--glow);
+  background-attachment: fixed;
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+  /* Animate palette changes when switching themes. */
+  transition: background-color 0.45s var(--ease), color 0.45s var(--ease);
+}
+
+h1,
+h2,
+h3,
+.display {
+  font-family: var(--font-display-stack);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Hide scrollbars but keep scrolling (mobile-app feel). */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Number flow / tabular figures for stats. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
