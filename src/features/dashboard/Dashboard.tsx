@@ -80,7 +80,7 @@ export function Dashboard() {
         </motion.div>
       )}
 
-      {display.stats && (
+      {display.stats && history.length > 0 && (
         <motion.div variants={listItem} className="grid grid-cols-3 gap-3.5">
           <Stat value={history.length} label="Workouts" />
           <Stat value={thisWeek} label="This week" />
