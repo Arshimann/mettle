@@ -5,3 +5,4 @@ export { Segmented } from './Segmented';
 export { Switch } from './Switch';
 export { PageHeader } from './PageHeader';
 export { EmptyState } from './EmptyState';
+export { Sheet } from './Sheet';
