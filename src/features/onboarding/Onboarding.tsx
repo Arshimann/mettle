@@ -7,7 +7,9 @@ import { cn } from '../../lib/cn';
 import { easeOut } from '../../theme/motion';
 import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
+import { useAuth } from '../../store/useAuth';
 import { ThemePicker } from '../settings/ThemePicker';
+import { AuthPanel } from '../auth/AuthPanel';
 import { TEMPLATES } from '../../data/templates';
 
 const STEPS = ['welcome', 'theme', 'units', 'template'] as const;
@@ -17,6 +19,7 @@ export function Onboarding() {
   const setUnits = useStore((s) => s.setUnits);
   const applyTemplate = useStore((s) => s.applyTemplate);
   const completeOnboarding = useStore((s) => s.completeOnboarding);
+  const configured = useAuth((s) => s.configured);
 
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
@@ -74,6 +77,21 @@ export function Onboarding() {
                   <p className="text-lg text-fg-muted leading-snug max-w-[20rem] mx-auto">
                     {APP_TAGLINE} Build your split, log every set, and watch the numbers climb.
                   </p>
+
+                  {configured && (
+                    <div className="mt-8 text-left">
+                      <AuthPanel onSuccess={() => go(1)} />
+                      <button
+                        onClick={() => go(1)}
+                        className="w-full text-center text-[13px] font-semibold text-fg-muted mt-4 py-2"
+                      >
+                        Continue without an account →
+                      </button>
+                      <p className="text-[12px] text-fg-subtle text-center mt-0.5 leading-snug">
+                        An account backs up and syncs your data. Without one, everything stays on this device.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -148,26 +166,28 @@ export function Onboarding() {
         </div>
       </div>
 
-      {/* nav bar */}
-      <div
-        className="px-6 pb-8 pt-3 flex items-center gap-3 max-w-[460px] mx-auto w-full"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
-      >
-        {step > 0 && (
-          <Button variant="ghost" onClick={() => go(step - 1)} aria-label="Back">
-            <ChevronLeft size={20} />
-          </Button>
-        )}
-        {step < STEPS.length - 1 ? (
-          <Button variant="accent" size="lg" fullWidth onClick={() => go(step + 1)}>
-            Continue <ArrowRight size={18} />
-          </Button>
-        ) : (
-          <Button variant="accent" size="lg" fullWidth onClick={finish}>
-            {templateId ? 'Start training' : 'Finish setup'} <ArrowRight size={18} />
-          </Button>
-        )}
-      </div>
+      {/* nav bar — hidden on the welcome step when sign-in is shown (it has its own actions) */}
+      {!(step === 0 && configured) && (
+        <div
+          className="px-6 pb-8 pt-3 flex items-center gap-3 max-w-[460px] mx-auto w-full"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
+        >
+          {step > 0 && (
+            <Button variant="ghost" onClick={() => go(step - 1)} aria-label="Back">
+              <ChevronLeft size={20} />
+            </Button>
+          )}
+          {step < STEPS.length - 1 ? (
+            <Button variant="accent" size="lg" fullWidth onClick={() => go(step + 1)}>
+              {step === 0 ? 'Get started' : 'Continue'} <ArrowRight size={18} />
+            </Button>
+          ) : (
+            <Button variant="accent" size="lg" fullWidth onClick={finish}>
+              {templateId ? 'Start training' : 'Finish setup'} <ArrowRight size={18} />
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
