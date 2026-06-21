@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { spring } from '../../theme/motion';
+import { useUI } from '../../store/useUI';
 
 /** Bottom sheet with slide-in/out. Backdrop click closes. */
 export function Sheet({
@@ -15,6 +16,15 @@ export function Sheet({
   title?: string;
   children: ReactNode;
 }) {
+  // Register as an open overlay so swipe-between-tabs is suppressed while up.
+  const pushOverlay = useUI((s) => s.pushOverlay);
+  const popOverlay = useUI((s) => s.popOverlay);
+  useEffect(() => {
+    if (!open) return;
+    pushOverlay();
+    return () => popOverlay();
+  }, [open, pushOverlay, popOverlay]);
+
   return (
     <AnimatePresence>
       {open && [

@@ -14,8 +14,12 @@ interface UIState {
   params: Record<string, unknown>;
   /** last real tab visited, so Settings can return where it came from */
   lastTab: Tab;
+  /** number of open overlays (sheets/modals); swipe-nav is disabled while > 0 */
+  overlays: number;
   navigate: (screen: ScreenId, params?: Record<string, unknown>) => void;
   back: () => void;
+  pushOverlay: () => void;
+  popOverlay: () => void;
 }
 
 /** Ephemeral navigation state (not persisted). */
@@ -24,6 +28,7 @@ export const useUI = create<UIState>((set, get) => ({
   dir: 1,
   params: {},
   lastTab: 'home',
+  overlays: 0,
   navigate: (screen, params = {}) => {
     const cur = get().screen;
     const a = SCREEN_ORDER.indexOf(cur as never);
@@ -32,4 +37,6 @@ export const useUI = create<UIState>((set, get) => ({
     set((s) => ({ screen, dir, params, lastTab: cur !== 'settings' ? (cur as Tab) : s.lastTab }));
   },
   back: () => get().navigate(get().lastTab),
+  pushOverlay: () => set((s) => ({ overlays: s.overlays + 1 })),
+  popOverlay: () => set((s) => ({ overlays: Math.max(0, s.overlays - 1) })),
 }));

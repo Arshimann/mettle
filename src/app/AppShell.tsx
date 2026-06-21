@@ -141,15 +141,21 @@ export function AppShell() {
   const navigate = useUI((s) => s.navigate);
 
   const dir = useUI((s) => s.dir);
+  const overlays = useUI((s) => s.overlays);
 
   // Lightweight swipe-between-tabs that doesn't interfere with scroll or taps.
   const touch = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: TouchEvent) => {
+    // Don't arm a swipe while a sheet/modal is open.
+    if (overlays > 0) {
+      touch.current = null;
+      return;
+    }
     const t = e.touches[0];
     touch.current = { x: t.clientX, y: t.clientY };
   };
   const onTouchEnd = (e: TouchEvent) => {
-    if (!touch.current || screen === 'settings') return;
+    if (!touch.current || screen === 'settings' || overlays > 0) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - touch.current.x;
     const dy = t.clientY - touch.current.y;
