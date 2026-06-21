@@ -108,7 +108,7 @@ const initialData: AppData = {
     restChime: true,
     haptics: true,
     trainingStyle: null,
-    tabs: { split: true, stretch: true, progress: true, learn: false },
+    tabs: { split: true, stretch: true, recovery: false, progress: true, learn: false },
     display: {
       stats: true,
       dayCards: true,

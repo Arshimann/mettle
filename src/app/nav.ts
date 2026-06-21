@@ -1,6 +1,7 @@
 import {
   Dumbbell,
   GraduationCap,
+  HeartPulse,
   Home,
   LayoutGrid,
   PersonStanding,
@@ -22,6 +23,7 @@ export const NAV: NavItem[] = [
   { id: 'split', label: 'Split', icon: LayoutGrid },
   { id: 'train', label: 'Train', icon: Dumbbell },
   { id: 'stretch', label: 'Stretch', icon: PersonStanding },
+  { id: 'recovery', label: 'Recovery', icon: HeartPulse },
   { id: 'progress', label: 'Progress', icon: TrendingUp },
   { id: 'learn', label: 'Learn', icon: GraduationCap },
   { id: 'you', label: 'You', icon: User },
@@ -31,6 +33,7 @@ export const NAV: NavItem[] = [
 const OPTIONAL: Partial<Record<NavItem['id'], keyof TabToggles>> = {
   split: 'split',
   stretch: 'stretch',
+  recovery: 'recovery',
   progress: 'progress',
   learn: 'learn',
 };

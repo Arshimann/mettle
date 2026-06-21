@@ -25,6 +25,7 @@ function Row({ label, desc, control }: { label: string; desc?: string; control: 
 const TAB_LABELS: Record<keyof TabToggles, string> = {
   split: 'Split',
   stretch: 'Stretch',
+  recovery: 'Recovery',
   progress: 'Progress',
   learn: 'Learn',
 };

@@ -21,7 +21,7 @@ export const STYLE_DEFS: Record<TrainingStyle, StyleDef> = {
     blurb: 'Build muscle and size with higher-volume training.',
     icon: Dumbbell,
     recommendedTemplate: 'ppl',
-    tabs: { split: true, stretch: false, progress: true, learn: true },
+    tabs: { split: true, stretch: false, recovery: false, progress: true, learn: true },
     preferredRest: 90,
   },
   strength: {
@@ -30,7 +30,7 @@ export const STYLE_DEFS: Record<TrainingStyle, StyleDef> = {
     blurb: 'Get as strong as possible on the big lifts. Heavy, low reps, long rest.',
     icon: Flame,
     recommendedTemplate: 'upper-lower',
-    tabs: { split: true, stretch: false, progress: true, learn: true },
+    tabs: { split: true, stretch: false, recovery: false, progress: true, learn: true },
     preferredRest: 180,
   },
   crossfit: {
@@ -39,7 +39,7 @@ export const STYLE_DEFS: Record<TrainingStyle, StyleDef> = {
     blurb: 'Varied, fast-paced conditioning. Mobility matters here.',
     icon: Activity,
     recommendedTemplate: 'full-body',
-    tabs: { split: true, stretch: true, progress: true, learn: false },
+    tabs: { split: true, stretch: true, recovery: true, progress: true, learn: false },
     preferredRest: 60,
   },
   all: {
@@ -48,7 +48,7 @@ export const STYLE_DEFS: Record<TrainingStyle, StyleDef> = {
     blurb: 'A bit of everything — strength, size, and conditioning.',
     icon: Layers,
     recommendedTemplate: 'full-body',
-    tabs: { split: true, stretch: true, progress: true, learn: true },
+    tabs: { split: true, stretch: true, recovery: false, progress: true, learn: true },
     preferredRest: 120,
   },
 };

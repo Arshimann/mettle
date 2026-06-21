@@ -109,6 +109,7 @@ export interface DisplayToggles {
 export interface TabToggles {
   split: boolean;
   stretch: boolean;
+  recovery: boolean;
   progress: boolean;
   learn: boolean;
 }
