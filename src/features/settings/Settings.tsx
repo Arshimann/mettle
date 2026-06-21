@@ -8,7 +8,7 @@ import { useUI } from '../../store/useUI';
 import { ThemePicker } from './ThemePicker';
 import { SyncSection } from './SyncSection';
 import type { SettingsSectionId } from './sections';
-import type { DisplayToggles } from '../../types';
+import type { DisplayToggles, TabToggles } from '../../types';
 
 function Row({ label, desc, control }: { label: string; desc?: string; control: ReactNode }) {
   return (
@@ -21,6 +21,13 @@ function Row({ label, desc, control }: { label: string; desc?: string; control: 
     </div>
   );
 }
+
+const TAB_LABELS: Record<keyof TabToggles, string> = {
+  split: 'Split',
+  stretch: 'Stretch',
+  progress: 'Progress',
+  learn: 'Learn',
+};
 
 const DISPLAY_LABELS: Record<keyof DisplayToggles, string> = {
   stats: 'Stats grid',
@@ -48,6 +55,7 @@ export function Settings() {
   const setUnits = useStore((s) => s.setUnits);
   const updateSettings = useStore((s) => s.updateSettings);
   const toggleDisplay = useStore((s) => s.toggleDisplay);
+  const toggleTab = useStore((s) => s.toggleTab);
   const exportData = useStore((s) => s.exportData);
   const importData = useStore((s) => s.importData);
   const resetData = useStore((s) => s.resetData);
@@ -92,6 +100,27 @@ export function Settings() {
                 />
               }
             />
+          </Card>
+          <Card className="divide-y divide-border">
+            <div className="pb-2.5">
+              <div className="font-medium text-[15px]">Tabs</div>
+              <div className="text-xs text-fg-muted mt-0.5">
+                Show or hide bottom-nav tabs. Home, Train, and You always stay.
+              </div>
+            </div>
+            {(Object.keys(TAB_LABELS) as (keyof TabToggles)[]).map((key) => (
+              <Row
+                key={key}
+                label={TAB_LABELS[key]}
+                control={
+                  <Switch
+                    checked={settings.tabs[key]}
+                    onChange={() => toggleTab(key)}
+                    aria-label={TAB_LABELS[key]}
+                  />
+                }
+              />
+            ))}
           </Card>
         </>
       )}

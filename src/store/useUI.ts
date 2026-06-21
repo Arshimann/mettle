@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 
-export type ScreenId = 'home' | 'split' | 'train' | 'stretch' | 'progress' | 'you' | 'settings';
+export type ScreenId = 'home' | 'split' | 'train' | 'stretch' | 'progress' | 'learn' | 'you' | 'settings';
 type Tab = Exclude<ScreenId, 'settings'>;
 
 /** Tab order used to derive transition direction (settings is not a tab). */
-export const SCREEN_ORDER: Tab[] = ['home', 'split', 'train', 'stretch', 'progress', 'you'];
+export const SCREEN_ORDER: Tab[] = ['home', 'split', 'train', 'stretch', 'progress', 'learn', 'you'];
 
 interface UIState {
   screen: ScreenId;

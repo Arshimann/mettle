@@ -7,7 +7,7 @@ import { haptics } from '../lib/haptics';
 import { springPop } from '../theme/motion';
 import { useUI, type ScreenId } from '../store/useUI';
 import { SETTINGS_SECTIONS } from '../features/settings/sections';
-import { NAV_ORDER } from './nav';
+import { visibleNav } from './nav';
 import { BottomNav } from './BottomNav';
 import { Screen } from './Screen';
 import { Dashboard } from '../features/dashboard/Dashboard';
@@ -15,8 +15,10 @@ import { Split } from '../features/split/Split';
 import { Train } from '../features/train/Train';
 import { Stretch } from '../features/stretch/Stretch';
 import { Progress } from '../features/progress/Progress';
+import { Learn } from '../features/learn/Learn';
 import { You } from '../features/you/You';
 import { Settings } from '../features/settings/Settings';
+import { useStore } from '../store/useStore';
 
 function renderScreen(screen: ScreenId) {
   switch (screen) {
@@ -30,6 +32,8 @@ function renderScreen(screen: ScreenId) {
       return <Stretch />;
     case 'progress':
       return <Progress />;
+    case 'learn':
+      return <Learn />;
     case 'you':
       return <You />;
     case 'settings':
@@ -142,6 +146,8 @@ export function AppShell() {
 
   const dir = useUI((s) => s.dir);
   const overlays = useUI((s) => s.overlays);
+  const tabs = useStore((s) => s.settings.tabs);
+  const order = visibleNav(tabs).map((n) => n.id);
 
   // Lightweight swipe-between-tabs that doesn't interfere with scroll or taps.
   const touch = useRef<{ x: number; y: number } | null>(null);
@@ -161,11 +167,12 @@ export function AppShell() {
     const dy = t.clientY - touch.current.y;
     touch.current = null;
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) {
-      const i = NAV_ORDER.indexOf(screen as never);
-      const ni = dx < 0 ? Math.min(i + 1, NAV_ORDER.length - 1) : Math.max(i - 1, 0);
+      const i = order.indexOf(screen as never);
+      if (i === -1) return;
+      const ni = dx < 0 ? Math.min(i + 1, order.length - 1) : Math.max(i - 1, 0);
       if (ni !== i) {
         haptics.select();
-        navigate(NAV_ORDER[ni]);
+        navigate(order[ni]);
       }
     }
   };

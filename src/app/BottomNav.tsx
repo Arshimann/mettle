@@ -3,11 +3,17 @@ import { cn } from '../lib/cn';
 import { spring } from '../theme/motion';
 import { haptics } from '../lib/haptics';
 import { useUI } from '../store/useUI';
-import { NAV } from './nav';
+import { useStore } from '../store/useStore';
+import { visibleNav } from './nav';
 
 export function BottomNav() {
   const screen = useUI((s) => s.screen);
   const navigate = useUI((s) => s.navigate);
+  const tabs = useStore((s) => s.settings.tabs);
+
+  const items = visibleNav(tabs);
+  // Drop labels once the bar gets crowded so 7 tabs still fit cleanly.
+  const iconOnly = items.length > 6;
 
   return (
     <nav
@@ -15,7 +21,7 @@ export function BottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="max-w-[640px] mx-auto flex items-stretch h-[60px]">
-        {NAV.map((item) => {
+        {items.map((item) => {
           const active = screen === item.id;
           const Icon = item.icon;
           return (
@@ -40,19 +46,21 @@ export function BottomNav() {
               )}
               <motion.span animate={{ scale: active ? 1.06 : 1, y: active ? -1 : 0 }} transition={spring}>
                 <Icon
-                  size={22}
+                  size={iconOnly ? 24 : 22}
                   strokeWidth={active ? 2.5 : 2}
                   className={active ? 'text-accent' : 'text-fg-subtle'}
                 />
               </motion.span>
-              <span
-                className={cn(
-                  'text-[10px] font-semibold tracking-tight whitespace-nowrap',
-                  active ? 'text-fg' : 'text-fg-subtle',
-                )}
-              >
-                {item.label}
-              </span>
+              {!iconOnly && (
+                <span
+                  className={cn(
+                    'text-[10px] font-semibold tracking-tight whitespace-nowrap',
+                    active ? 'text-fg' : 'text-fg-subtle',
+                  )}
+                >
+                  {item.label}
+                </span>
+              )}
             </button>
           );
         })}
