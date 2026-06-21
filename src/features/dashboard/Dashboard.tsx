@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
-import { ChevronRight, Dumbbell, Flame, Plus } from 'lucide-react';
+import { ChevronRight, Dumbbell, Flame, Moon, Play, Plus } from 'lucide-react';
 import { Button, Card, CardLabel, CountUp } from '../../components/ui';
 import { listContainer, listItem, spring } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
 import { computeStreak, sessionVolume } from '../../lib/formulas';
+import { nextDay } from '../../lib/training';
 import { prettyDate, todayStr, daysBetween } from '../../lib/date';
 import { unitLabel } from '../../lib/units';
 import { DidYouKnow } from './DidYouKnow';
@@ -34,6 +35,7 @@ export function Dashboard() {
   const prs = useStore((s) => s.prs);
   const units = useStore((s) => s.settings.units);
   const display = useStore((s) => s.settings.display);
+  const stretchEnabled = useStore((s) => s.settings.tabs.stretch);
   const startSession = useStore((s) => s.startSession);
   const navigate = useUI((s) => s.navigate);
 
@@ -54,6 +56,9 @@ export function Dashboard() {
     const d = daysBetween(p.date, today);
     return d >= 0 && d < 7;
   }).length;
+
+  const trainedToday = last?.date === today;
+  const up = nextDay(split, history);
 
   return (
     <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3.5">
@@ -107,6 +112,53 @@ export function Dashboard() {
               </div>
             </div>
           </Card>
+        </motion.div>
+      )}
+
+      {display.upNext && split.length > 0 && (
+        <motion.div variants={listItem}>
+          {trainedToday ? (
+            <Card className="flex items-center gap-3.5 p-4">
+              <div className="w-11 h-11 rounded-btn bg-accent-soft grid place-items-center text-accent shrink-0">
+                <Moon size={22} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <CardLabel className="mb-0.5">Today</CardLabel>
+                <div className="font-semibold leading-tight">Rest & recover</div>
+                <div className="text-xs text-fg-muted mt-0.5">You've trained today — let it rebuild.</div>
+              </div>
+              {stretchEnabled && (
+                <Button size="sm" onClick={() => navigate('stretch')}>
+                  Loosen up
+                </Button>
+              )}
+            </Card>
+          ) : (
+            up && (
+              <Card className="flex items-center gap-3.5 p-4">
+                <div className="w-11 h-11 rounded-btn bg-accent text-accent-fg grid place-items-center shrink-0">
+                  <Play size={20} fill="currentColor" strokeWidth={0} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <CardLabel className="mb-0.5">Up next</CardLabel>
+                  <div className="font-semibold leading-tight truncate">{up.name}</div>
+                  <div className="text-xs text-fg-muted mt-0.5">
+                    {up.exercises.length} exercise{up.exercises.length === 1 ? '' : 's'}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="accent"
+                  onClick={() => {
+                    startSession(up);
+                    navigate('train');
+                  }}
+                >
+                  Start
+                </Button>
+              </Card>
+            )
+          )}
         </motion.div>
       )}
 

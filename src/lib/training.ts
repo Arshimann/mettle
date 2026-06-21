@@ -1,4 +1,4 @@
-import type { HistoryEntry, SetEntry, Units } from '../types';
+import type { HistoryEntry, SetEntry, SplitDay, Units } from '../types';
 import { loadIncrement, toKg } from './units';
 
 export interface LastPerf {
@@ -18,6 +18,18 @@ export function lastPerformance(history: HistoryEntry[], name: string): LastPerf
     }
   }
   return null;
+}
+
+/**
+ * The day to train next: the one after your most recently trained day in the
+ * split rotation. Falls back to the first day if there's no usable history.
+ */
+export function nextDay(split: SplitDay[], history: HistoryEntry[]): SplitDay | null {
+  if (split.length === 0) return null;
+  const lastId = history[0]?.dayId ?? null;
+  const idx = lastId ? split.findIndex((d) => d.id === lastId) : -1;
+  if (idx === -1) return split[0];
+  return split[(idx + 1) % split.length];
 }
 
 /**
