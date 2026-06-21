@@ -225,7 +225,9 @@ export function Settings() {
         <Card>
           <div className="font-brand font-normal text-2xl">{APP_NAME}</div>
           <div className="text-sm text-fg-muted">{APP_TAGLINE}</div>
-          <div className="text-xs text-fg-subtle mt-2">Version 0.1 · Schema v{SCHEMA_VERSION}</div>
+          <div className="text-xs text-fg-subtle mt-2">
+            v{__APP_VERSION__} · built {__BUILD_DATE__} · schema v{SCHEMA_VERSION}
+          </div>
         </Card>
       )}
 
