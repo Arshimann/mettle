@@ -12,8 +12,8 @@ export function PageHeader({
   return (
     <div className="flex items-end justify-between gap-3 mb-5">
       <div className="min-w-0">
-        <h1 className="text-[26px] leading-none truncate">{title}</h1>
-        {subtitle && <p className="text-sm text-fg-muted mt-1.5">{subtitle}</p>}
+        <h1 className="text-[26px] leading-tight truncate">{title}</h1>
+        {subtitle && <p className="text-sm text-fg-muted mt-1">{subtitle}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>
