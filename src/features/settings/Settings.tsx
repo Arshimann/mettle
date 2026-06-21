@@ -7,6 +7,7 @@ import { useStore } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
 import { ThemePicker } from './ThemePicker';
 import { SyncSection } from './SyncSection';
+import { ProfileSection } from './ProfileSection';
 import type { SettingsSectionId } from './sections';
 import type { DisplayToggles, TabToggles } from '../../types';
 
@@ -83,6 +84,8 @@ export function Settings() {
 
   return (
     <div className="pb-4 space-y-3.5">
+      {section === 'profile' && <ProfileSection />}
+
       {section === 'appearance' && (
         <>
           <ThemePicker />
