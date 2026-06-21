@@ -13,19 +13,27 @@ import { AuthPanel } from '../auth/AuthPanel';
 import { StyleQuiz } from './StyleQuiz';
 import { STYLE_DEFS } from '../../data/trainingStyles';
 import { TEMPLATES } from '../../data/templates';
+import type { Sex } from '../../types';
 
-const STEPS = ['welcome', 'quiz', 'theme', 'units', 'template'] as const;
+const STEPS = ['welcome', 'quiz', 'theme', 'units', 'profile', 'template'] as const;
+
+const inputCls =
+  'w-full h-12 px-3.5 rounded-btn bg-surface-2 border border-border text-[15px] outline-none focus:border-border-strong';
 
 export function Onboarding() {
   const units = useStore((s) => s.settings.units);
   const setUnits = useStore((s) => s.setUnits);
   const applyTemplate = useStore((s) => s.applyTemplate);
+  const setProfile = useStore((s) => s.setProfile);
   const completeOnboarding = useStore((s) => s.completeOnboarding);
   const configured = useAuth((s) => s.configured);
 
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const [templateId, setTemplateId] = useState<string | null>(null);
+  const [height, setHeight] = useState('');
+  const [age, setAge] = useState('');
+  const [sex, setSex] = useState<Sex>(null);
 
   const go = (next: number) => {
     setDir(next > step ? 1 : -1);
@@ -38,6 +46,11 @@ export function Onboarding() {
       const t = TEMPLATES.find((x) => x.id === templateId);
       if (t) applyTemplate(t.days);
     }
+    setProfile({
+      height: height ? Math.round(parseFloat(height)) : null,
+      age: age ? Math.round(parseFloat(age)) : null,
+      sex,
+    });
     haptics.success();
     completeOnboarding();
   };
@@ -132,6 +145,45 @@ export function Onboarding() {
                       { value: 'lbs', label: 'Pounds (lbs)' },
                     ]}
                   />
+                </div>
+              )}
+
+              {key === 'profile' && (
+                <div>
+                  <h1 className="text-3xl mb-1.5">About you</h1>
+                  <p className="text-fg-muted mb-6">
+                    Optional — powers your calorie &amp; protein targets. Skip and add it later if you like.
+                  </p>
+                  <div className="space-y-3">
+                    <input
+                      inputMode="numeric"
+                      value={height}
+                      onChange={(e) => setHeight(e.target.value)}
+                      placeholder="Height (cm)"
+                      aria-label="Height in cm"
+                      className={inputCls}
+                    />
+                    <input
+                      inputMode="numeric"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      placeholder="Age"
+                      aria-label="Age"
+                      className={inputCls}
+                    />
+                    <div>
+                      <div className="text-[13px] font-semibold text-fg-muted mb-1.5">Sex</div>
+                      <Segmented
+                        fullWidth
+                        value={(sex ?? '') as 'male' | 'female'}
+                        onChange={(v) => setSex(v)}
+                        options={[
+                          { value: 'male', label: 'Male' },
+                          { value: 'female', label: 'Female' },
+                        ]}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 

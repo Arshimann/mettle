@@ -65,6 +65,14 @@ export function Coach() {
   const water = wKg ? waterTarget(wKg) : null;
   const cals = wKg ? tdee(wKg, profile) : null;
 
+  const profileSummary = [
+    profile.height ? `${profile.height} cm` : null,
+    profile.age ? `${profile.age} yrs` : null,
+    profile.sex ? (profile.sex === 'male' ? 'Male' : 'Female') : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   const inputCls =
     'w-full h-12 px-3.5 rounded-btn bg-surface-2 border border-border text-[15px] outline-none focus:border-border-strong';
 
@@ -76,6 +84,11 @@ export function Coach() {
           <Pencil size={14} /> Profile
         </button>
       </div>
+
+      <button onClick={openEditor} className="text-[13px] text-fg-muted mb-3 flex items-center gap-1.5 text-left">
+        {profileSummary || 'Add your height, age & sex'}
+        <Pencil size={12} className="text-fg-subtle shrink-0" />
+      </button>
 
       {!wKg ? (
         <p className="text-sm text-fg-muted">Log your body weight to get protein, water, and calorie targets.</p>
