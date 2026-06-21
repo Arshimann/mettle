@@ -3,6 +3,7 @@ import type { ThemeId } from '../theme/themes';
 export type Units = 'kg' | 'lbs';
 export type Sex = 'male' | 'female' | null;
 export type Activity = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+export type TrainingStyle = 'crossfit' | 'bodybuilding' | 'strength' | 'all';
 
 /** Weights are always stored canonically in kilograms. */
 export interface SetEntry {
@@ -101,6 +102,15 @@ export interface DisplayToggles {
   streak: boolean;
   weeklyRecap: boolean;
   didYouKnow: boolean;
+  upNext: boolean;
+}
+
+/** Which optional bottom-nav tabs are visible. Home/Train/You are always on. */
+export interface TabToggles {
+  split: boolean;
+  stretch: boolean;
+  progress: boolean;
+  learn: boolean;
 }
 
 export interface Settings {
@@ -110,6 +120,8 @@ export interface Settings {
   preferredRest: number; // seconds
   restChime: boolean;
   haptics: boolean;
+  trainingStyle: TrainingStyle | null;
+  tabs: TabToggles;
   display: DisplayToggles;
 }
 

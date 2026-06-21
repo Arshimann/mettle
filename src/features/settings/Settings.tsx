@@ -28,6 +28,7 @@ const DISPLAY_LABELS: Record<keyof DisplayToggles, string> = {
   dayCards: 'Day cards',
   lastWorkout: 'Last workout',
   weeklyRecap: 'Weekly recap',
+  upNext: 'Up next',
   didYouKnow: 'Did you know',
 };
 

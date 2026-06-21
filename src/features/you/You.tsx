@@ -3,6 +3,7 @@ import { PageHeader } from '../../components/ui';
 import { listContainer, listItem } from '../../theme/motion';
 import { BodyWeight } from './BodyWeight';
 import { Goals } from './Goals';
+import { TrainingStyleCard } from './TrainingStyleCard';
 import { Supplements } from './Supplements';
 import { Consistency } from './Consistency';
 import { Coach } from './Coach';
@@ -10,7 +11,7 @@ import { Achievements } from './Achievements';
 import { OneRm } from './OneRm';
 import { Stopwatch } from './Stopwatch';
 
-const CARDS = [BodyWeight, Goals, Supplements, Consistency, Coach, Achievements, OneRm, Stopwatch];
+const CARDS = [BodyWeight, Goals, TrainingStyleCard, Supplements, Consistency, Coach, Achievements, OneRm, Stopwatch];
 
 export function You() {
   return (

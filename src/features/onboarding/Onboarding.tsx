@@ -10,9 +10,11 @@ import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
 import { ThemePicker } from '../settings/ThemePicker';
 import { AuthPanel } from '../auth/AuthPanel';
+import { StyleQuiz } from './StyleQuiz';
+import { STYLE_DEFS } from '../../data/trainingStyles';
 import { TEMPLATES } from '../../data/templates';
 
-const STEPS = ['welcome', 'theme', 'units', 'template'] as const;
+const STEPS = ['welcome', 'quiz', 'theme', 'units', 'template'] as const;
 
 export function Onboarding() {
   const units = useStore((s) => s.settings.units);
@@ -95,6 +97,20 @@ export function Onboarding() {
                 </div>
               )}
 
+              {key === 'quiz' && (
+                <div>
+                  <h1 className="text-2xl mb-1.5">Let's tailor it to you</h1>
+                  <p className="text-fg-muted mb-6">A few quick questions — change it anytime.</p>
+                  <StyleQuiz
+                    onComplete={(style) => {
+                      setTemplateId(STYLE_DEFS[style].recommendedTemplate);
+                      go(step + 1);
+                    }}
+                    onBack={() => go(step - 1)}
+                  />
+                </div>
+              )}
+
               {key === 'theme' && (
                 <div>
                   <h1 className="text-3xl mb-1.5">Pick your look</h1>
@@ -166,8 +182,8 @@ export function Onboarding() {
         </div>
       </div>
 
-      {/* nav bar — hidden on the welcome step when sign-in is shown (it has its own actions) */}
-      {!(step === 0 && configured) && (
+      {/* nav bar — hidden on welcome (when sign-in shows) and the quiz (own actions) */}
+      {!((step === 0 && configured) || key === 'quiz') && (
         <div
           className="px-6 pb-8 pt-3 flex items-center gap-3 max-w-[460px] mx-auto w-full"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}

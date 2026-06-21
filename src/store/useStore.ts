@@ -6,6 +6,7 @@ import { uid } from '../lib/id';
 import { todayStr } from '../lib/date';
 import { toKg } from '../lib/units';
 import { DEFAULT_THEME, type ThemeId } from '../theme/themes';
+import { STYLE_DEFS } from '../data/trainingStyles';
 import type {
   ActiveSession,
   BodyWeightEntry,
@@ -19,6 +20,8 @@ import type {
   SplitDay,
   SplitExercise,
   Supplement,
+  TabToggles,
+  TrainingStyle,
 } from '../types';
 
 interface AppData {
@@ -47,6 +50,8 @@ interface AppActions {
   setUnits: (units: Settings['units']) => void;
   updateSettings: (patch: Partial<Settings>) => void;
   toggleDisplay: (key: keyof DisplayToggles) => void;
+  toggleTab: (key: keyof TabToggles) => void;
+  setTrainingStyle: (style: TrainingStyle) => void;
   completeOnboarding: () => void;
   // profile
   setProfile: (patch: Partial<Profile>) => void;
@@ -94,6 +99,8 @@ const initialData: AppData = {
     preferredRest: 120,
     restChime: true,
     haptics: true,
+    trainingStyle: null,
+    tabs: { split: true, stretch: true, progress: true, learn: false },
     display: {
       stats: true,
       dayCards: true,
@@ -101,6 +108,7 @@ const initialData: AppData = {
       streak: true,
       weeklyRecap: true,
       didYouKnow: true,
+      upNext: true,
     },
   },
   profile: { height: null, age: null, sex: null, activity: 'moderate' },
@@ -129,6 +137,22 @@ export const useStore = create<Store>()(
         set((s) => ({
           settings: { ...s.settings, display: { ...s.settings.display, [key]: !s.settings.display[key] } },
         })),
+      toggleTab: (key) =>
+        set((s) => ({
+          settings: { ...s.settings, tabs: { ...s.settings.tabs, [key]: !s.settings.tabs[key] } },
+        })),
+      setTrainingStyle: (style) =>
+        set((s) => {
+          const def = STYLE_DEFS[style];
+          return {
+            settings: {
+              ...s.settings,
+              trainingStyle: style,
+              tabs: { ...def.tabs },
+              preferredRest: def.preferredRest,
+            },
+          };
+        }),
       completeOnboarding: () => set((s) => ({ settings: { ...s.settings, onboarded: true } })),
 
       // ---- profile ----
@@ -318,6 +342,23 @@ export const useStore = create<Store>()(
       name: STORAGE_KEY,
       version: SCHEMA_VERSION,
       storage: createJSONStorage(() => appStorage),
+      // Deep-merge persisted state over defaults so settings added in later
+      // versions (tabs, trainingStyle, display.upNext, …) always have a value.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<AppData>;
+        const ps = (p.settings ?? {}) as Partial<Settings>;
+        return {
+          ...current,
+          ...p,
+          settings: {
+            ...current.settings,
+            ...ps,
+            tabs: { ...current.settings.tabs, ...(ps.tabs ?? {}) },
+            display: { ...current.settings.display, ...(ps.display ?? {}) },
+          },
+          profile: { ...current.profile, ...(p.profile ?? {}) },
+        };
+      },
       partialize: (s) => ({
         settings: s.settings,
         profile: s.profile,
