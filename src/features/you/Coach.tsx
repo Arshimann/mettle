@@ -4,7 +4,8 @@ import { Button, Card, CardLabel, Segmented, Sheet } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
-import { proteinTarget, tdee, waterTarget } from '../../lib/formulas';
+import { caloriePlan, DIET_RATES, proteinTarget, tdee, waterTarget, type DietGoal } from '../../lib/formulas';
+import { fromKg, unitLabel } from '../../lib/units';
 import type { Activity, Sex } from '../../types';
 
 const ACTIVITIES: { value: Activity; label: string }[] = [
@@ -31,8 +32,11 @@ export function Coach() {
   const bodyWeight = useStore((s) => s.bodyWeight);
   const profile = useStore((s) => s.profile);
   const setProfile = useStore((s) => s.setProfile);
+  const units = useStore((s) => s.settings.units);
 
   const [open, setOpen] = useState(false);
+  const [goal, setGoal] = useState<DietGoal>('maintain');
+  const [rateIdx, setRateIdx] = useState(0);
   const [height, setHeight] = useState('');
   const [age, setAge] = useState('');
   const [sex, setSex] = useState<Exclude<Sex, null>>('male');
@@ -64,6 +68,10 @@ export function Coach() {
   const protein = wKg ? proteinTarget(wKg) : null;
   const water = wKg ? waterTarget(wKg) : null;
   const cals = wKg ? tdee(wKg, profile) : null;
+
+  const rates = DIET_RATES[goal];
+  const rate = rates[Math.min(rateIdx, rates.length - 1)];
+  const plan = cals != null && wKg != null ? caloriePlan(cals, wKg, goal, rate.delta) : null;
 
   const profileSummary = [
     profile.height ? `${profile.height} cm` : null,
@@ -104,12 +112,63 @@ export function Coach() {
             <Row
               label="Calories"
               value={`${cals.toLocaleString()} kcal`}
-              note={`Maintenance. Bulk +300 = ${(cals + 300).toLocaleString()}, cut −400 = ${(cals - 400).toLocaleString()}.`}
+              note="Maintenance — what you burn on an average day. Plan a bulk or cut below."
             />
           ) : (
             <Row label="Calories" value="—" note="Add height, age, and sex to unlock calorie targets." />
           )}
           <Row label="Sleep" value="7–9 hrs" note="More growth happens here than at the rack." />
+        </div>
+      )}
+
+      {plan && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <CardLabel>Bulk / cut</CardLabel>
+          <Segmented
+            fullWidth
+            value={goal}
+            onChange={(g) => { setGoal(g); setRateIdx(0); }}
+            options={[
+              { value: 'cut', label: 'Cut' },
+              { value: 'maintain', label: 'Maintain' },
+              { value: 'bulk', label: 'Bulk' },
+            ]}
+          />
+          {goal !== 'maintain' && (
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {rates.map((r, i) => (
+                <button
+                  key={r.id}
+                  onClick={() => { haptics.tap(); setRateIdx(i); }}
+                  className={cn(
+                    'px-3 h-9 rounded-full text-[13px] font-semibold border transition-colors',
+                    i === rateIdx ? 'bg-accent text-accent-fg border-accent' : 'bg-surface-2 text-fg-muted border-border',
+                  )}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="mt-3 rounded-card bg-surface-2 p-3.5">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[13px] font-semibold text-fg-muted">Daily target</span>
+              <span className="text-2xl font-bold tabular">
+                {plan.calories.toLocaleString()} <span className="text-sm font-semibold text-fg-muted">kcal</span>
+              </span>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[13px]">
+              <span className="text-fg-muted">{plan.delta === 0 ? 'At maintenance' : `${plan.delta > 0 ? '+' : ''}${plan.delta} kcal/day`}</span>
+              <span className="font-semibold">
+                {plan.weeklyKg === 0
+                  ? 'Hold weight'
+                  : `≈ ${plan.weeklyKg < 0 ? 'lose' : 'gain'} ${fromKg(Math.abs(plan.weeklyKg), units)} ${unitLabel(units)}/wk`}
+              </span>
+            </div>
+            <div className="mt-1.5 text-[13px] text-fg-muted">
+              Protein {plan.protein[0]}–{plan.protein[1]} g/day
+            </div>
+          </div>
         </div>
       )}
 

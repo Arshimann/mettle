@@ -54,6 +54,46 @@ export function waterTarget(weightKg: number): number {
   return Math.round(weightKg * 35);
 }
 
+export type DietGoal = 'cut' | 'maintain' | 'bulk';
+
+/** Calorie offsets (kcal/day vs maintenance) the user can pick per goal. */
+export const DIET_RATES: Record<DietGoal, { id: string; label: string; delta: number }[]> = {
+  cut: [
+    { id: 'lean', label: 'Lean', delta: -300 },
+    { id: 'moderate', label: 'Moderate', delta: -500 },
+    { id: 'aggressive', label: 'Aggressive', delta: -750 },
+  ],
+  maintain: [{ id: 'maintain', label: 'Maintain', delta: 0 }],
+  bulk: [
+    { id: 'lean', label: 'Lean', delta: 200 },
+    { id: 'standard', label: 'Standard', delta: 400 },
+  ],
+};
+
+export interface CaloriePlan {
+  calories: number; // target kcal/day (clamped to a sane floor)
+  delta: number; // actual kcal/day vs maintenance after clamping
+  weeklyKg: number; // estimated weekly bodyweight change (signed kg)
+  protein: [number, number]; // daily protein range (g)
+}
+
+/** ~7700 kcal per kg of bodyweight change. */
+const KCAL_PER_KG = 7700;
+
+/**
+ * Turn maintenance calories + a goal/offset into a target plan: calories,
+ * the realised daily delta, an estimated weekly weight change, and a
+ * goal-appropriate protein range (higher on a cut to spare muscle).
+ */
+export function caloriePlan(tdeeVal: number, weightKg: number, goal: DietGoal, delta: number): CaloriePlan {
+  const calories = Math.max(1200, Math.round((tdeeVal + delta) / 10) * 10);
+  const actualDelta = calories - tdeeVal;
+  const weeklyKg = Math.round(((actualDelta * 7) / KCAL_PER_KG) * 100) / 100;
+  const ppk = goal === 'cut' ? [1.8, 2.2] : goal === 'bulk' ? [1.6, 2.0] : [1.4, 1.8];
+  const protein: [number, number] = [Math.round(weightKg * ppk[0]), Math.round(weightKg * ppk[1])];
+  return { calories, delta: actualDelta, weeklyKg, protein };
+}
+
 /**
  * Current training streak: consecutive trained days counting back from the most
  * recent workout, allowing a single rest day between sessions. Gone after 3+ idle days.
