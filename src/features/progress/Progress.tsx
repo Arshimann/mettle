@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, TrendingUp } from 'lucide-react';
+import { ChevronDown, Star, TrendingUp } from 'lucide-react';
 import { Card, CardLabel, EmptyState, PageHeader } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { listContainer, listItem } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
-import { bestE1RM, sessionVolume } from '../../lib/formulas';
+import { bestE1RM, estimate1RM, sessionVolume } from '../../lib/formulas';
 import { fmtWeight, unitLabel } from '../../lib/units';
 import { prettyDate } from '../../lib/date';
 import { LineChart } from './LineChart';
@@ -142,19 +142,41 @@ export function Progress() {
                   </button>
                   {open && (
                     <div className="px-4 pb-4 space-y-2.5 border-t border-border">
-                      {h.exercises.map((ex, i) => (
-                        <div key={i} className="pt-2.5">
-                          <div className="text-sm font-semibold mb-1.5">{ex.name}</div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {ex.sets.map((s, j) => (
-                              <span key={j} className="text-[12px] px-2 py-1 rounded-md bg-surface-2 text-fg-muted tabular">
-                                {fmtWeight(s.weight, units)}×{s.reps}
-                                {s.toFailure ? ' · F' : ''}
-                              </span>
-                            ))}
+                      {h.exercises.map((ex, i) => {
+                        // Top set = the set with the best estimated 1RM (your max effort).
+                        let topIdx = 0;
+                        let topE = 0;
+                        ex.sets.forEach((s, k) => {
+                          const e = estimate1RM(s.weight, s.reps);
+                          if (e > topE) {
+                            topE = e;
+                            topIdx = k;
+                          }
+                        });
+                        return (
+                          <div key={i} className="pt-2.5">
+                            <div className="text-sm font-semibold mb-1.5">{ex.name}</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {ex.sets.map((s, j) => {
+                                const isTop = topE > 0 && j === topIdx && ex.sets.length > 1;
+                                return (
+                                  <span
+                                    key={j}
+                                    className={cn(
+                                      'text-[12px] px-2 py-1 rounded-md tabular flex items-center gap-1',
+                                      isTop ? 'bg-accent-soft text-accent font-semibold' : 'bg-surface-2 text-fg-muted',
+                                    )}
+                                  >
+                                    {isTop && <Star size={11} fill="currentColor" strokeWidth={0} />}
+                                    {fmtWeight(s.weight, units)}×{s.reps}
+                                    {s.toFailure ? ' · F' : ''}
+                                  </span>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {h.note && <div className="text-sm text-fg-muted pt-1 italic">“{h.note}”</div>}
                     </div>
                   )}

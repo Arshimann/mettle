@@ -62,6 +62,7 @@ export function Train() {
   const [celebration, setCelebration] = useState<EndSessionResult | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [tools, setTools] = useState<{ ei: number; name: string; target: number } | null>(null);
+  const [flashReps, setFlashReps] = useState<{ ei: number; si: number } | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
 
   useEffect(() => {
@@ -186,33 +187,47 @@ export function Train() {
     }));
 
   const toggleDone = (ei: number, si: number, wPh?: string, rPh?: string) => {
-    let becameDone = false;
-    // When completing a set, accept the suggested/last values for any empty field
-    // so it always logs real numbers — important for to-failure sets and fast logging.
-    const fill = (cur: string, ph?: string) => (cur === '' && ph && ph !== '0' ? ph : cur);
-    update((s) => {
-      const set = s.exercises[ei].sets[si];
-      becameDone = !set.done;
-      return {
-        ...s,
-        exercises: s.exercises.map((ex, i) =>
-          i !== ei
-            ? ex
-            : {
-                ...ex,
-                sets: ex.sets.map((st, j) =>
-                  j !== si
-                    ? st
-                    : becameDone
-                      ? { ...st, done: true, weight: fill(st.weight, wPh), reps: fill(st.reps, rPh) }
-                      : { ...st, done: false },
-                ),
-              },
-        ),
-      };
-    });
+    const cur = session.exercises[ei]?.sets[si];
+    if (!cur) return;
+    const becameDone = !cur.done;
+
+    // To-failure sets must record the reps you actually hit — never guess them.
+    // Block completion and flag the reps field until a number is entered.
+    if (becameDone && cur.toFailure && cur.reps.trim() === '') {
+      haptics.warn();
+      setFlashReps({ ei, si });
+      setTimeout(() => setFlashReps((f) => (f && f.ei === ei && f.si === si ? null : f)), 2500);
+      return;
+    }
+
+    // For normal sets, accept the suggested/last values for any empty field so a
+    // quick tap still logs real numbers. F sets keep exactly the reps you typed.
+    const fill = (val: string, ph?: string) => (val === '' && ph && ph !== '0' ? ph : val);
+    update((s) => ({
+      ...s,
+      exercises: s.exercises.map((ex, i) =>
+        i !== ei
+          ? ex
+          : {
+              ...ex,
+              sets: ex.sets.map((st, j) =>
+                j !== si
+                  ? st
+                  : becameDone
+                    ? {
+                        ...st,
+                        done: true,
+                        weight: fill(st.weight, wPh),
+                        reps: st.toFailure ? st.reps : fill(st.reps, rPh),
+                      }
+                    : { ...st, done: false },
+              ),
+            },
+      ),
+    }));
     if (becameDone) {
       haptics.success();
+      setFlashReps((f) => (f && f.ei === ei && f.si === si ? null : f));
       startRest(preferredRest);
     } else {
       haptics.tap();
@@ -312,9 +327,15 @@ export function Train() {
                       value={set.reps}
                       onChange={(v) => patchSet(ei, si, { reps: v })}
                       step={1}
-                      placeholder={repsPlaceholder}
+                      placeholder={set.toFailure ? 'reps?' : repsPlaceholder}
                       aria-label="Reps"
-                      className={set.done ? 'border-accent' : 'border-border'}
+                      className={cn(
+                        flashReps?.ei === ei && flashReps?.si === si
+                          ? 'border-danger ring-2 ring-danger/35'
+                          : set.done
+                            ? 'border-accent'
+                            : 'border-border',
+                      )}
                     />
                     <button
                       onClick={() => { haptics.tap(); patchSet(ei, si, { toFailure: !set.toFailure }); }}
