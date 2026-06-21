@@ -6,6 +6,7 @@ import { listContainer, listItem } from '../../theme/motion';
 import { haptics } from '../../lib/haptics';
 import { STRETCH_CATEGORIES, type StretchCategory } from '../../data/stretches';
 import { RoutinePlayer } from './RoutinePlayer';
+import { StretchFigure } from './StretchFigure';
 
 export function Stretch() {
   const [active, setActive] = useState<StretchCategory | null>(null);
@@ -59,17 +60,22 @@ export function Stretch() {
         )}
         <div className="space-y-3">
           {active?.stretches.map((s, i) => (
-            <div key={i} className="bg-surface-2 rounded-card p-3.5">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <h3 className="font-semibold">{s.name}</h3>
-                <span className="text-[11px] font-bold text-accent bg-accent-soft px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
-                  {s.hold}
-                </span>
+            <div key={i} className="bg-surface-2 rounded-card p-3.5 flex gap-3.5">
+              <div className="w-16 h-16 shrink-0 rounded-btn bg-canvas/50 text-accent grid place-items-center">
+                <StretchFigure kind={s.illustration} className="w-12 h-12" />
               </div>
-              <div className="text-[11px] uppercase tracking-wider text-fg-subtle font-semibold mb-1.5">
-                {s.target}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h3 className="font-semibold">{s.name}</h3>
+                  <span className="text-[11px] font-bold text-accent bg-accent-soft px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                    {s.hold}
+                  </span>
+                </div>
+                <div className="text-[11px] uppercase tracking-wider text-fg-subtle font-semibold mb-1.5">
+                  {s.target}
+                </div>
+                <p className="text-sm text-fg-muted leading-relaxed">{s.steps}</p>
               </div>
-              <p className="text-sm text-fg-muted leading-relaxed">{s.steps}</p>
             </div>
           ))}
         </div>

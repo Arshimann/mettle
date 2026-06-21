@@ -6,6 +6,7 @@ import { haptics } from '../../lib/haptics';
 import { playChime } from '../../lib/sound';
 import { useUI } from '../../store/useUI';
 import { holdSeconds, type StretchCategory } from '../../data/stretches';
+import { StretchFigure } from './StretchFigure';
 
 const RADIUS = 88;
 const CIRC = 2 * Math.PI * RADIUS;
@@ -119,8 +120,9 @@ export function RoutinePlayer({ category, onClose }: { category: StretchCategory
                 />
               </svg>
               <div className="absolute flex flex-col items-center">
-                <span className="text-5xl font-bold tabular leading-none">{remaining}</span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-fg-subtle mt-1.5">seconds</span>
+                <StretchFigure key={cur.illustration} kind={cur.illustration} className="w-24 h-24 text-accent" />
+                <span className="text-3xl font-bold tabular leading-none mt-0.5">{remaining}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-subtle mt-1">seconds</span>
               </div>
             </div>
 
