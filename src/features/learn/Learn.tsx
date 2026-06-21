@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, GraduationCap } from 'lucide-react';
-import { Card, CardLabel, CountUp, EmptyState, PageHeader } from '../../components/ui';
-import { cn } from '../../lib/cn';
+import { ChevronRight, GraduationCap } from 'lucide-react';
+import { Card, CardLabel, CountUp, EmptyState, PageHeader, Sheet } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { listContainer, listItem } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
@@ -166,31 +165,38 @@ export function Learn() {
             <CardLabel className="mb-0 text-accent">The playbook</CardLabel>
           </div>
           <div className="space-y-2.5">
-            {LESSONS.map((lesson, i) => {
-              const open = openLesson === i;
-              return (
-                <Card key={i} className="p-0 overflow-hidden">
-                  <button
-                    onClick={() => { haptics.tap(); setOpenLesson(open ? null : i); }}
-                    className="w-full flex items-center justify-between gap-3 p-4 text-left"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-accent mb-0.5">{lesson.tag}</div>
-                      <div className="font-semibold leading-snug">{lesson.title}</div>
-                    </div>
-                    <ChevronDown size={18} className={cn('text-fg-subtle shrink-0 transition-transform', open && 'rotate-180')} />
-                  </button>
-                  {open && (
-                    <p className="px-4 pb-4 -mt-1 text-sm text-fg-muted leading-relaxed border-t border-border pt-3">
-                      {lesson.body}
-                    </p>
-                  )}
-                </Card>
-              );
-            })}
+            {LESSONS.map((lesson, i) => (
+              <Card key={i} className="p-0">
+                <button
+                  onClick={() => { haptics.tap(); setOpenLesson(i); }}
+                  className="w-full flex items-center justify-between gap-3 p-4 text-left"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-accent mb-0.5">{lesson.tag}</div>
+                    <div className="font-semibold leading-snug">{lesson.title}</div>
+                  </div>
+                  <ChevronRight size={18} className="text-fg-subtle shrink-0" />
+                </button>
+              </Card>
+            ))}
           </div>
         </motion.div>
       </motion.div>
+
+      <Sheet
+        open={openLesson !== null}
+        onClose={() => setOpenLesson(null)}
+        title={openLesson !== null ? LESSONS[openLesson].title : undefined}
+      >
+        {openLesson !== null && (
+          <>
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-accent mb-2 -mt-1">
+              {LESSONS[openLesson].tag}
+            </div>
+            <p className="text-[15px] text-fg-muted leading-relaxed">{LESSONS[openLesson].body}</p>
+          </>
+        )}
+      </Sheet>
     </div>
   );
 }
