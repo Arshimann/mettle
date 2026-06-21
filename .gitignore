@@ -26,3 +26,6 @@ dist-ssr
 # Local env (keep .env.example tracked)
 .env
 .env.*.local
+
+# Claude Code local tooling (preview launch config, etc.)
+.claude/
