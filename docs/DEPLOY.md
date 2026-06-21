@@ -45,18 +45,33 @@ Same `dist/` build works on Vercel, GitHub Pages, etc.
 
 ---
 
-## 4. Supabase (only for the later accounts phase)
+## 4. Supabase (optional — enables account backup + cross-device sync)
+
+The app works 100% offline without this. Set it up when you want your data backed
+up and synced across devices. Email + password sign-in.
 
 1. supabase.com → **New project** → name it, set a DB password, pick a region → wait ~2 min.
-2. **Project Settings → API** → copy the **Project URL** and the **anon public** key.
-3. Put them where the app can read them (not used in v1, but ready):
+2. **SQL Editor** → run the migrations **in order**:
+   - paste and run `supabase/migrations/0001_init.sql` (creates the `profiles` table),
+   - then paste and run `supabase/migrations/0002_sync.sql` (the row-level security
+     policies + timestamp trigger that let a user read/write *only their own* data).
+3. **Authentication → Sign In / Providers → Email**: make sure **Email** is enabled.
+   For a frictionless personal app, turn **Confirm email** *off* — then sign-up logs
+   you straight in. (Leave it on if you'd rather verify emails; users then have to
+   click a confirmation link before their first login.)
+4. **Project Settings → API** → copy the **Project URL** and the **anon public** key.
+5. Put them where the app can read them:
    - Local: create `C:\Git\mettle\.env` (already git-ignored):
      ```
      VITE_SUPABASE_URL=https://xxxx.supabase.co
      VITE_SUPABASE_ANON_KEY=eyJ...
      ```
-   - Netlify: **Site settings → Environment variables** → add the same two keys, then redeploy.
-4. **SQL Editor** → paste and run `supabase/migrations/0001_init.sql` to create the
-   profiles/social tables for when accounts ship. (Skip until then if you like.)
+   - Netlify: **Site settings → Environment variables** → add the same two keys, then
+     **trigger a redeploy** (env vars are baked in at build time).
+
+Once those env vars are present, a "Backup & sync" section appears in Settings and the
+first-launch screen offers sign up / log in (still skippable — "Continue offline").
 
 > Keys: the `anon` key is safe to ship in a client app. Never expose the `service_role` key.
+> The `friendships` / `workout_reactions` / `workout_comments` tables from 0001 stay
+> locked (no policies) — they're for a future social phase and aren't used yet.
