@@ -6,15 +6,16 @@ import { useStore } from '../../store/useStore';
 import { computeStreak } from '../../lib/formulas';
 import { fromKg, parseNum, unitLabel } from '../../lib/units';
 import { daysBetween, todayStr } from '../../lib/date';
-import type { BodyWeightEntry, Goal, GoalType, HistoryEntry, Units } from '../../types';
+import type { BodyWeightEntry, Goal, GoalType, HistoryEntry, PR, Units } from '../../types';
 
 interface GoalCtx {
   history: HistoryEntry[];
+  prs: PR[];
   bodyWeight: BodyWeightEntry[];
   units: Units;
 }
 
-function currentValue(goal: Goal, { history, bodyWeight, units }: GoalCtx): number {
+function currentValue(goal: Goal, { history, prs, bodyWeight, units }: GoalCtx): number {
   switch (goal.type) {
     case 'bodyweight': {
       const sorted = [...bodyWeight].sort((a, b) => a.date.localeCompare(b.date));
@@ -23,7 +24,10 @@ function currentValue(goal: Goal, { history, bodyWeight, units }: GoalCtx): numb
     }
     case 'lift': {
       const lower = (goal.exercise ?? '').toLowerCase();
-      let best = 0; // heaviest weight actually lifted = your PR for this lift
+      // Heaviest weight you've actually hit for this lift = your PR. Look across
+      // both workout history AND the PR list, so an existing record counts even
+      // if it predates the goal or isn't in recent sessions.
+      let best = 0;
       history.forEach((h) =>
         h.exercises.forEach((e) => {
           if (e.name.toLowerCase() === lower) {
@@ -33,6 +37,9 @@ function currentValue(goal: Goal, { history, bodyWeight, units }: GoalCtx): numb
           }
         }),
       );
+      prs.forEach((p) => {
+        if (p.exercise.toLowerCase() === lower && p.weight > best) best = p.weight;
+      });
       return Math.round(fromKg(best, units));
     }
     case 'frequency': {
@@ -59,6 +66,7 @@ const TYPE_OPTIONS = [
 export function Goals() {
   const goals = useStore((s) => s.goals);
   const history = useStore((s) => s.history);
+  const prs = useStore((s) => s.prs);
   const bodyWeight = useStore((s) => s.bodyWeight);
   const units = useStore((s) => s.settings.units);
   const addGoal = useStore((s) => s.addGoal);
@@ -74,7 +82,7 @@ export function Goals() {
   const rows = useMemo(
     () =>
       goals.map((g) => {
-        const current = currentValue(g, { history, bodyWeight, units });
+        const current = currentValue(g, { history, prs, bodyWeight, units });
         // Body-weight goals measure from where you started (can go up or down);
         // lift/frequency/streak measure from 0 so your existing PR shows immediately.
         const base = g.type === 'bodyweight' ? (g.baseValue ?? current) : 0;
@@ -83,7 +91,7 @@ export function Goals() {
           denom !== 0 ? Math.max(0, Math.min(1, (current - base) / denom)) : current >= g.target ? 1 : 0;
         return { goal: g, current, pct };
       }),
-    [goals, history, bodyWeight, units],
+    [goals, history, prs, bodyWeight, units],
   );
 
   const save = () => {
@@ -98,7 +106,7 @@ export function Goals() {
     else label = `${t}-day streak`;
 
     const ex = type === 'lift' ? exercise.trim() : undefined;
-    const base = currentValue({ id: '', type, target: t, exercise: ex, label, createdAt: '' }, { history, bodyWeight, units });
+    const base = currentValue({ id: '', type, target: t, exercise: ex, label, createdAt: '' }, { history, prs, bodyWeight, units });
     addGoal({ type, target: t, label, exercise: ex, baseValue: base });
     haptics.success();
     setExercise('');
