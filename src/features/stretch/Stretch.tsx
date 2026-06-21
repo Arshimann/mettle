@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
-import { Card, PageHeader, Sheet } from '../../components/ui';
+import { ChevronRight, Play } from 'lucide-react';
+import { Button, Card, PageHeader, Sheet } from '../../components/ui';
 import { listContainer, listItem } from '../../theme/motion';
 import { haptics } from '../../lib/haptics';
 import { STRETCH_CATEGORIES, type StretchCategory } from '../../data/stretches';
+import { RoutinePlayer } from './RoutinePlayer';
 
 export function Stretch() {
   const [active, setActive] = useState<StretchCategory | null>(null);
+  const [playing, setPlaying] = useState<StretchCategory | null>(null);
 
   return (
     <div>
@@ -39,7 +41,22 @@ export function Stretch() {
       </motion.div>
 
       <Sheet open={!!active} onClose={() => setActive(null)} title={active?.name}>
-        <p className="text-sm text-fg-muted mb-4 -mt-1">{active?.desc}</p>
+        <p className="text-sm text-fg-muted mb-3 -mt-1">{active?.desc}</p>
+        {active && (
+          <Button
+            variant="accent"
+            size="lg"
+            fullWidth
+            className="mb-4"
+            onClick={() => {
+              haptics.tap();
+              setPlaying(active);
+              setActive(null);
+            }}
+          >
+            <Play size={18} fill="currentColor" strokeWidth={0} /> Start guided routine
+          </Button>
+        )}
         <div className="space-y-3">
           {active?.stretches.map((s, i) => (
             <div key={i} className="bg-surface-2 rounded-card p-3.5">
@@ -57,6 +74,8 @@ export function Stretch() {
           ))}
         </div>
       </Sheet>
+
+      {playing && <RoutinePlayer category={playing} onClose={() => setPlaying(null)} />}
     </div>
   );
 }

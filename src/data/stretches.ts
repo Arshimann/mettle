@@ -15,6 +15,13 @@ export interface StretchCategory {
   stretches: Stretch[];
 }
 
+/** Guided hold length (seconds) parsed from a `hold` string; rep-based holds
+ *  fall back to a sensible default so the routine player always has a timer. */
+export function holdSeconds(hold: string): number {
+  const m = hold.match(/(\d+)\s*s/i);
+  return m ? Number(m[1]) : 30;
+}
+
 export const STRETCH_CATEGORIES: StretchCategory[] = [
   {
     id: 'posture',

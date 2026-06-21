@@ -2,28 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, X } from 'lucide-react';
 import { haptics } from '../../lib/haptics';
+import { playChime } from '../../lib/sound';
 import { useStore } from '../../store/useStore';
-
-function beep() {
-  try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g);
-    g.connect(ctx.destination);
-    o.type = 'sine';
-    o.frequency.value = 880;
-    g.gain.setValueAtTime(0.0001, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.32);
-    o.start();
-    o.stop(ctx.currentTime + 0.34);
-    setTimeout(() => ctx.close(), 500);
-  } catch {
-    /* audio unavailable */
-  }
-}
 
 export function RestTimer() {
   const session = useStore((s) => s.activeSession);
@@ -41,7 +21,7 @@ export function RestTimer() {
 
   useEffect(() => {
     if (endsAt && now >= endsAt) {
-      if (restChime) beep();
+      if (restChime) playChime();
       haptics.success();
       update((s) => ({ ...s, restEndsAt: null, restDuration: null }));
     }
