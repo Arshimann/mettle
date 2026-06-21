@@ -6,6 +6,7 @@ import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
 import { ThemePicker } from './ThemePicker';
+import { SyncSection } from './SyncSection';
 import type { SettingsSectionId } from './sections';
 import type { DisplayToggles } from '../../types';
 
@@ -138,6 +139,8 @@ export function Settings() {
           ))}
         </Card>
       )}
+
+      {section === 'sync' && <SyncSection />}
 
       {section === 'data' && (
         <Card className="space-y-2.5">
