@@ -5,16 +5,16 @@ import { Button } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { playChime } from '../../lib/sound';
 import { useUI } from '../../store/useUI';
-import { holdSeconds, type StretchCategory } from '../../data/stretches';
+import { holdSeconds, type PlayableRoutine } from '../../data/stretches';
 import { StretchFigure } from './StretchFigure';
 
 const RADIUS = 88;
 const CIRC = 2 * Math.PI * RADIUS;
 
-export function RoutinePlayer({ category, onClose }: { category: StretchCategory; onClose: () => void }) {
+export function RoutinePlayer({ routine, onClose }: { routine: PlayableRoutine; onClose: () => void }) {
   const pushOverlay = useUI((s) => s.pushOverlay);
   const popOverlay = useUI((s) => s.popOverlay);
-  const stretches = category.stretches;
+  const stretches = routine.stretches;
 
   const [idx, setIdx] = useState(0);
   const [remaining, setRemaining] = useState(() => holdSeconds(stretches[0].hold));
@@ -68,7 +68,7 @@ export function RoutinePlayer({ category, onClose }: { category: StretchCategory
   return (
     <div className="fixed inset-0 z-[70] bg-canvas flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="flex items-center justify-between px-5 h-14 shrink-0">
-        <div className="font-semibold truncate">{category.name}</div>
+        <div className="font-semibold truncate">{routine.name}</div>
         <button onClick={onClose} aria-label="Close routine" className="w-9 h-9 grid place-items-center rounded-full bg-surface-2 text-fg-muted">
           <X size={18} />
         </button>

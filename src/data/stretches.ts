@@ -1,4 +1,4 @@
-import { Activity, Dumbbell, Move, PersonStanding, Sunrise, Wind, type LucideIcon } from 'lucide-react';
+import { Activity, Dumbbell, Move, MoveVertical, PersonStanding, Sunrise, Wind, type LucideIcon } from 'lucide-react';
 import type { FigureKind } from '../features/stretch/StretchFigure';
 
 export interface Stretch {
@@ -7,6 +7,26 @@ export interface Stretch {
   hold: string;
   steps: string;
   illustration: FigureKind;
+}
+
+/** A user-created stretch (same shape as a built-in, plus an id). */
+export interface CustomStretch extends Stretch {
+  id: string;
+}
+
+/** A user-composed routine. Stretches are stored inline so a routine keeps
+ *  working even if a custom stretch it drew from is later deleted. */
+export interface CustomRoutine {
+  id: string;
+  name: string;
+  stretches: Stretch[];
+}
+
+/** Lightweight shape the routine player needs — both built-in categories and
+ *  custom routines satisfy it. */
+export interface PlayableRoutine {
+  name: string;
+  stretches: Stretch[];
 }
 
 export interface StretchCategory {
@@ -301,6 +321,70 @@ export const STRETCH_CATEGORIES: StretchCategory[] = [
         hold: '30s / side',
         steps: 'Reach one hand down your back and gently press that elbow with the other hand.',
         illustration: 'overhead-reach',
+      },
+    ],
+  },
+  {
+    id: 'decompress',
+    name: 'Decompress & grow taller',
+    desc: 'Lengthen the spine and undo a day of sitting and heavy loading.',
+    icon: MoveVertical,
+    stretches: [
+      {
+        name: 'Dead hang',
+        target: 'Spine · lats · shoulders',
+        hold: '2 × 30s',
+        steps: 'Hang from a pull-up bar with a relaxed grip and let your whole body go heavy. Breathe out and let your shoulders and spine lengthen toward the floor.',
+        illustration: 'dead-hang',
+      },
+      {
+        name: 'Hanging pelvic tilt',
+        target: 'Lower spine · core',
+        hold: '8 reps',
+        steps: 'From a dead hang, gently tuck your pelvis under and draw your knees up a few inches, then release. Small, controlled traction for the lower back.',
+        illustration: 'dead-hang',
+      },
+      {
+        name: 'Jefferson curl',
+        target: 'Full posterior chain',
+        hold: '5 slow reps',
+        steps: 'Stand tall holding a light weight and roll down one vertebra at a time, letting the spine round segment by segment, then stack back up slowly.',
+        illustration: 'forward-fold',
+      },
+      {
+        name: 'Ragdoll hang',
+        target: 'Spine · hamstrings',
+        hold: '45–60s',
+        steps: 'Fold forward with soft knees, hold opposite elbows, and let your head and arms hang completely heavy. Sway slightly to release the lower back.',
+        illustration: 'forward-fold',
+      },
+      {
+        name: 'Standing back extension',
+        target: 'Front spine · hip flexors',
+        hold: '20s',
+        steps: 'Place your hands on your lower back and gently arch backward, opening the front of the body and reversing a day of slouching. Keep it pain-free.',
+        illustration: 'overhead-reach',
+      },
+      {
+        name: 'Downward dog',
+        target: 'Spine · hamstrings · calves',
+        hold: '30–45s',
+        steps: 'From all fours, press your hips up and back into an inverted V. Push the floor away to lengthen the spine and reach your heels toward the ground.',
+        illustration: 'downward-dog',
+      },
+      {
+        name: 'Cat-cow',
+        target: 'Spine mobility',
+        hold: '8 reps',
+        steps: 'On all fours, flow between arching toward the ceiling and dropping your belly. Move with your breath to decompress each segment of the spine.',
+        illustration: 'cat-cow',
+      },
+      {
+        name: 'Cobra',
+        target: 'Front spine · abs',
+        hold: '5 reps',
+        steps: 'Lie face down and press your chest up while keeping your hips grounded. A gentle backbend to balance out all the forward folding.',
+        illustration: 'cobra',
       },
     ],
   },

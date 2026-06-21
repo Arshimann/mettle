@@ -7,6 +7,7 @@ import { todayStr } from '../lib/date';
 import { toKg } from '../lib/units';
 import { DEFAULT_THEME, type ThemeId } from '../theme/themes';
 import { STYLE_DEFS } from '../data/trainingStyles';
+import type { CustomRoutine, CustomStretch } from '../data/stretches';
 import type {
   ActiveSession,
   BodyWeightEntry,
@@ -36,6 +37,8 @@ interface AppData {
   supplements: Supplement[];
   supplementsTaken: { date: string | null; ids: string[] };
   achievements: { id: string; unlockedAt: string }[];
+  customStretches: CustomStretch[];
+  customRoutines: CustomRoutine[];
   activeSession: ActiveSession | null;
 }
 
@@ -83,6 +86,11 @@ interface AppActions {
   addSupplement: (s: Omit<Supplement, 'id'>) => void;
   removeSupplement: (id: string) => void;
   toggleSupplementTaken: (id: string) => void;
+  // custom stretches & routines
+  addCustomStretch: (s: Omit<CustomStretch, 'id'>) => void;
+  removeCustomStretch: (id: string) => void;
+  addCustomRoutine: (r: Omit<CustomRoutine, 'id'>) => void;
+  removeCustomRoutine: (id: string) => void;
   // data
   exportData: () => string;
   importData: (json: string) => boolean;
@@ -121,6 +129,8 @@ const initialData: AppData = {
   supplements: [],
   supplementsTaken: { date: null, ids: [] },
   achievements: [],
+  customStretches: [],
+  customRoutines: [],
   activeSession: null,
 };
 
@@ -286,6 +296,16 @@ export const useStore = create<Store>()(
           return { supplementsTaken: { date: today, ids } };
         }),
 
+      // ---- custom stretches & routines ----
+      addCustomStretch: (cs) =>
+        set((s) => ({ customStretches: [...s.customStretches, { ...cs, id: uid() }] })),
+      removeCustomStretch: (id) =>
+        set((s) => ({ customStretches: s.customStretches.filter((x) => x.id !== id) })),
+      addCustomRoutine: (r) =>
+        set((s) => ({ customRoutines: [...s.customRoutines, { ...r, id: uid() }] })),
+      removeCustomRoutine: (id) =>
+        set((s) => ({ customRoutines: s.customRoutines.filter((x) => x.id !== id) })),
+
       // ---- data portability ----
       exportData: () => {
         const s = get();
@@ -301,6 +321,8 @@ export const useStore = create<Store>()(
           supplements: s.supplements,
           supplementsTaken: s.supplementsTaken,
           achievements: s.achievements,
+          customStretches: s.customStretches,
+          customRoutines: s.customRoutines,
           activeSession: s.activeSession,
         };
         return JSON.stringify({ app: 'mettle', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), data: payload }, null, 2);
@@ -332,6 +354,8 @@ export const useStore = create<Store>()(
           supplements: [],
           supplementsTaken: { date: null, ids: [] },
           achievements: [],
+          customStretches: [],
+          customRoutines: [],
           activeSession: null,
           // keep settings + profile
           settings: s.settings,
@@ -371,6 +395,8 @@ export const useStore = create<Store>()(
         supplements: s.supplements,
         supplementsTaken: s.supplementsTaken,
         achievements: s.achievements,
+        customStretches: s.customStretches,
+        customRoutines: s.customRoutines,
         activeSession: s.activeSession,
       }),
     },
