@@ -35,11 +35,21 @@ Add it to your phone: open the URL in mobile Safari/Chrome → Share → **Add t
 
 ---
 
-## 3. Cloudflare Pages (free alternative)
+## 3. Cloudflare Pages (free alternative — ready to switch anytime)
+
+Why you'd switch: Cloudflare Pages' free tier has **unlimited bandwidth and requests**
+(Netlify's free tier caps at 100 GB/mo). For a service-worker-cached PWA you're very
+unlikely to hit Netlify's limit, but Cloudflare removes the ceiling entirely. The build
+is identical, so moving is low-risk — keep both connected if you like.
 
 1. dash.cloudflare.com → **Workers & Pages → Create → Pages → Connect to Git**.
 2. Pick the repo. Framework preset: **Vite**. Build: `npm run build`. Output: `dist`.
-3. Save & deploy.
+3. If you use Supabase sync, add `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` under
+   **Settings → Environment variables** (Production), then redeploy (baked in at build).
+4. Save & deploy. Point your domain at it when ready.
+
+SPA routing + deep links are handled by `public/_redirects` (`/*  /index.html  200`),
+which ships in the build and works on Netlify, Cloudflare Pages, Vercel, etc.
 
 Same `dist/` build works on Vercel, GitHub Pages, etc.
 
