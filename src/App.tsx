@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ThemeProvider } from './theme/ThemeProvider';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppShell } from './app/AppShell';
 import { Onboarding } from './features/onboarding/Onboarding';
 import { useStore } from './store/useStore';
@@ -12,5 +13,9 @@ export default function App() {
   // Restore any Supabase session and start cloud sync. No-ops in local-first builds.
   useEffect(() => initAuth(), [initAuth]);
 
-  return <ThemeProvider>{onboarded ? <AppShell /> : <Onboarding />}</ThemeProvider>;
+  return (
+    <ThemeProvider>
+      <ErrorBoundary>{onboarded ? <AppShell /> : <Onboarding />}</ErrorBoundary>
+    </ThemeProvider>
+  );
 }
