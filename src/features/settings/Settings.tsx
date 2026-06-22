@@ -53,6 +53,7 @@ function download(filename: string, text: string) {
 
 export function Settings() {
   const section = ((useUI((s) => s.params.section) as SettingsSectionId) || 'appearance');
+  const setWhatsNewOpen = useUI((s) => s.setWhatsNewOpen);
   const settings = useStore((s) => s.settings);
   const setUnits = useStore((s) => s.setUnits);
   const updateSettings = useStore((s) => s.updateSettings);
@@ -232,6 +233,12 @@ export function Settings() {
           <div className="text-xs text-fg-subtle mt-2">
             v{__APP_VERSION__} · built {__BUILD_DATE__} · schema v{SCHEMA_VERSION}
           </div>
+          <button
+            onClick={() => setWhatsNewOpen(true)}
+            className="mt-3 text-[13px] font-semibold text-accent"
+          >
+            What's new
+          </button>
         </Card>
       )}
 

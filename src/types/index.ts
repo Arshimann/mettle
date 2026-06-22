@@ -124,6 +124,8 @@ export interface Settings {
   trainingStyle: TrainingStyle | null;
   tabs: TabToggles;
   display: DisplayToggles;
+  /** Highest app version whose "What's new" notes the user has seen. */
+  lastSeenVersion: string;
 }
 
 /** In-progress workout. Values are entered as strings, committed to history as numbers. */

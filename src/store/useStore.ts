@@ -108,6 +108,7 @@ const initialData: AppData = {
     restChime: true,
     haptics: true,
     trainingStyle: null,
+    lastSeenVersion: '',
     tabs: { split: true, stretch: true, recovery: false, progress: true, learn: false },
     display: {
       stats: true,

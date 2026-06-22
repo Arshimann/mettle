@@ -16,10 +16,13 @@ interface UIState {
   lastTab: Tab;
   /** number of open overlays (sheets/modals); swipe-nav is disabled while > 0 */
   overlays: number;
+  /** manual re-open of the "What's new" sheet (from Settings → About) */
+  whatsNewOpen: boolean;
   navigate: (screen: ScreenId, params?: Record<string, unknown>) => void;
   back: () => void;
   pushOverlay: () => void;
   popOverlay: () => void;
+  setWhatsNewOpen: (open: boolean) => void;
 }
 
 /** Ephemeral navigation state (not persisted). */
@@ -29,6 +32,7 @@ export const useUI = create<UIState>((set, get) => ({
   params: {},
   lastTab: 'home',
   overlays: 0,
+  whatsNewOpen: false,
   navigate: (screen, params = {}) => {
     const cur = get().screen;
     const a = SCREEN_ORDER.indexOf(cur as never);
@@ -39,4 +43,5 @@ export const useUI = create<UIState>((set, get) => ({
   back: () => get().navigate(get().lastTab),
   pushOverlay: () => set((s) => ({ overlays: s.overlays + 1 })),
   popOverlay: () => set((s) => ({ overlays: Math.max(0, s.overlays - 1) })),
+  setWhatsNewOpen: (open) => set({ whatsNewOpen: open }),
 }));
