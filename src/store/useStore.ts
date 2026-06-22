@@ -120,7 +120,7 @@ const initialData: AppData = {
       upNext: true,
     },
   },
-  profile: { height: null, age: null, sex: null, activity: 'moderate' },
+  profile: { height: null, age: null, sex: 'male', activity: 'moderate' },
   split: [],
   savedSplits: [],
   history: [],
@@ -372,6 +372,10 @@ export const useStore = create<Store>()(
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<AppData>;
         const ps = (p.settings ?? {}) as Partial<Settings>;
+        const profile = { ...current.profile, ...(p.profile ?? {}) };
+        // Older installs stored sex:null, which silently blocked calorie targets.
+        // Default it so TDEE always resolves once height + age are set.
+        if (profile.sex == null) profile.sex = 'male';
         return {
           ...current,
           ...p,
@@ -381,7 +385,7 @@ export const useStore = create<Store>()(
             tabs: { ...current.settings.tabs, ...(ps.tabs ?? {}) },
             display: { ...current.settings.display, ...(ps.display ?? {}) },
           },
-          profile: { ...current.profile, ...(p.profile ?? {}) },
+          profile,
         };
       },
       partialize: (s) => ({

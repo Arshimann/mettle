@@ -71,7 +71,7 @@ export function Coach() {
           {cals != null ? (
             <Row label="Calories" value={`${cals.toLocaleString()} kcal`} note="Maintenance — what you burn on an average day. Plan a bulk or cut below." />
           ) : (
-            <Row label="Calories" value="—" note="Add height, age, and sex in Settings › You to unlock calorie targets." />
+            <Row label="Calories" value="—" note="Add your height and age in Settings › You to unlock calorie targets." />
           )}
           <Row label="Sleep" value="7–9 hrs" note="More growth happens here than at the rack." />
         </div>
