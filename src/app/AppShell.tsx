@@ -10,6 +10,7 @@ import { SETTINGS_SECTIONS } from '../features/settings/sections';
 import { visibleNav } from './nav';
 import { BottomNav } from './BottomNav';
 import { Screen } from './Screen';
+import { UpdatePrompt } from '../features/system/UpdatePrompt';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { Split } from '../features/split/Split';
 import { Train } from '../features/train/Train';
@@ -193,6 +194,7 @@ export function AppShell() {
         </Screen>
       </main>
       <BottomNav />
+      <UpdatePrompt />
     </div>
   );
 }
