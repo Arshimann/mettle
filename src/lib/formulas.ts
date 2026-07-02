@@ -127,19 +127,6 @@ export function computeStreak(history: HistoryEntry[]): number {
   return trained;
 }
 
-/** Consecutive missed days (incl. today) going back from today. */
-export function recentMissedDays(history: HistoryEntry[]): number {
-  const dates = new Set(history.map((h) => h.date));
-  let cursor = fromISO(todayStr());
-  let misses = 0;
-  while (misses < 7) {
-    if (dates.has(toISO(cursor))) break;
-    misses++;
-    cursor = addDays(cursor, -1);
-  }
-  return misses;
-}
-
 export interface ConsistencyCell {
   iso: string;
   trained: boolean;
