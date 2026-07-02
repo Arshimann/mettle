@@ -154,15 +154,18 @@ export function AppShell() {
   const tabs = useStore((s) => s.settings.tabs);
   const order = visibleNav(tabs).map((n) => n.id);
 
-  // Lightweight swipe-between-tabs that doesn't interfere with scroll or taps.
+  // Swipe-between-tabs, armed only from the top (header) or bottom (nav) bands —
+  // a swipe that starts mid-content (building a split, scrolling a list) is ignored
+  // so you can't accidentally yank yourself to another tab.
   const touch = useRef<{ x: number; y: number } | null>(null);
+  const inSwipeZone = (y: number) => y <= 72 || y >= window.innerHeight - 96;
   const onTouchStart = (e: TouchEvent) => {
-    // Don't arm a swipe while a sheet/modal is open.
-    if (overlays > 0) {
+    // Don't arm a swipe while a sheet/modal is open, or from the content area.
+    const t = e.touches[0];
+    if (overlays > 0 || !inSwipeZone(t.clientY)) {
       touch.current = null;
       return;
     }
-    const t = e.touches[0];
     touch.current = { x: t.clientX, y: t.clientY };
   };
   const onTouchEnd = (e: TouchEvent) => {
@@ -183,13 +186,11 @@ export function AppShell() {
   };
 
   return (
-    <div className={cn('min-h-svh')}>
+    // Touch handlers live on the root so the header and bottom nav (siblings of
+    // <main>) count as swipe zones.
+    <div className={cn('min-h-svh')} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <Header />
-      <main
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        className="max-w-[640px] mx-auto px-[18px] pt-3 pb-[92px]"
-      >
+      <main className="max-w-[640px] mx-auto px-[18px] pt-3 pb-[92px]">
         <Screen key={screen} dir={dir}>
           {renderScreen(screen)}
         </Screen>
