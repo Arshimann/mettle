@@ -12,7 +12,7 @@ import { ThemePicker } from '../settings/ThemePicker';
 import { AuthPanel } from '../auth/AuthPanel';
 import { StyleQuiz } from './StyleQuiz';
 import { STYLE_DEFS } from '../../data/trainingStyles';
-import { TEMPLATES } from '../../data/templates';
+import { TEMPLATES, TEMPLATE_CATEGORIES } from '../../data/templates';
 import type { Sex } from '../../types';
 
 const STEPS = ['welcome', 'quiz', 'theme', 'units', 'profile', 'template'] as const;
@@ -192,26 +192,37 @@ export function Onboarding() {
                   <h1 className="text-3xl mb-1.5">Choose a starting point</h1>
                   <p className="text-fg-muted mb-6">Use a proven split or start from scratch.</p>
                   <div className="space-y-2.5">
-                    {TEMPLATES.map((t) => {
-                      const active = templateId === t.id;
+                    {TEMPLATE_CATEGORIES.map((cat) => {
+                      const list = TEMPLATES.filter((t) => t.category === cat);
+                      if (list.length === 0) return null;
                       return (
-                        <button
-                          key={t.id}
-                          onClick={() => {
-                            haptics.select();
-                            setTemplateId(t.id);
-                          }}
-                          className={cn(
-                            'w-full text-left rounded-card p-4 border-2 transition-colors bg-surface',
-                            active ? 'border-accent' : 'border-border',
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold">{t.name}</span>
-                            <span className="text-[11px] font-semibold text-fg-subtle">{t.cadence}</span>
+                        <div key={cat} className="space-y-2.5">
+                          <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-fg-subtle pt-1.5 px-0.5">
+                            {cat}
                           </div>
-                          <p className="text-sm text-fg-muted mt-1 leading-snug">{t.desc}</p>
-                        </button>
+                          {list.map((t) => {
+                            const active = templateId === t.id;
+                            return (
+                              <button
+                                key={t.id}
+                                onClick={() => {
+                                  haptics.select();
+                                  setTemplateId(t.id);
+                                }}
+                                className={cn(
+                                  'w-full text-left rounded-card p-4 border-2 transition-colors bg-surface',
+                                  active ? 'border-accent' : 'border-border',
+                                )}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold">{t.name}</span>
+                                  <span className="text-[11px] font-semibold text-fg-subtle">{t.cadence}</span>
+                                </div>
+                                <p className="text-sm text-fg-muted mt-1 leading-snug">{t.desc}</p>
+                              </button>
+                            );
+                          })}
+                        </div>
                       );
                     })}
                     <button

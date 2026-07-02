@@ -104,6 +104,7 @@ export const EXERCISE_LIBRARY: LibraryExercise[] = [
   { name: 'Machine Shoulder Press', group: 'Shoulders' },
   { name: 'Cable Lateral Raise', group: 'Shoulders' },
   { name: 'Behind-the-Neck Press', group: 'Shoulders' },
+  { name: 'Weighted Pull-Up', group: 'Back' },
   { name: 'Pendlay Row', group: 'Back' },
   { name: 'Meadows Row', group: 'Back' },
   { name: 'Chest-Supported Row', group: 'Back' },

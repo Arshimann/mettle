@@ -14,9 +14,10 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Dumbbell, GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Dumbbell, GripVertical, LayoutGrid, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Button, Card, EmptyState, PageHeader, Sheet, Sortable } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
+import { TemplateBrowser } from './TemplateBrowser';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
@@ -33,6 +34,7 @@ export function Split() {
   const [pickerForDay, setPickerForDay] = useState<string | null>(null);
   const [nameSheet, setNameSheet] = useState<{ id: string | null; value: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -94,11 +96,18 @@ export function Split() {
         title="Split"
         subtitle={split.length ? `${split.length} day${split.length === 1 ? '' : 's'}` : 'Your training days'}
         action={
-          <Button size="sm" variant="accent" onClick={() => { haptics.tap(); setNameSheet({ id: null, value: '' }); }}>
-            <Plus size={15} /> Day
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => { haptics.tap(); setTemplatesOpen(true); }}>
+              <LayoutGrid size={15} /> Templates
+            </Button>
+            <Button size="sm" variant="accent" onClick={() => { haptics.tap(); setNameSheet({ id: null, value: '' }); }}>
+              <Plus size={15} /> Day
+            </Button>
+          </div>
         }
       />
+
+      <TemplateBrowser open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
 
       {split.length === 0 ? (
         <Card className="p-0">
