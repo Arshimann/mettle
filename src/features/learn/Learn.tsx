@@ -14,6 +14,9 @@ import { LineChart } from '../progress/LineChart';
 
 const GROUP_OF = new Map(EXERCISE_LIBRARY.map((e) => [e.name.toLowerCase(), e.group]));
 
+// Deterministic featured lesson — same all day, rotates tomorrow.
+const TODAY_LESSON = Math.floor(Date.now() / 86400000) % LESSONS.length;
+
 function Stat({ value, label, suffix }: { value: number; label: string; suffix?: string }) {
   return (
     <Card className="p-4 text-center">
@@ -168,20 +171,27 @@ export function Learn() {
             <CardLabel className="mb-0 text-accent">The playbook</CardLabel>
           </div>
           <div className="space-y-2.5">
-            {LESSONS.map((lesson, i) => (
-              <Card key={i} className="p-0">
-                <button
-                  onClick={() => { haptics.tap(); setOpenLesson(i); }}
-                  className="w-full flex items-center justify-between gap-3 p-4 text-left"
-                >
-                  <div className="min-w-0">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-accent mb-0.5">{lesson.tag}</div>
-                    <div className="font-semibold leading-snug">{lesson.title}</div>
-                  </div>
-                  <ChevronRight size={18} className="text-fg-subtle shrink-0" />
-                </button>
-              </Card>
-            ))}
+            {/* Today's featured lesson first, then the rest of the playbook. */}
+            {[TODAY_LESSON, ...LESSONS.map((_, i) => i).filter((i) => i !== TODAY_LESSON)].map((i) => {
+              const lesson = LESSONS[i];
+              const featured = i === TODAY_LESSON;
+              return (
+                <Card key={i} className="p-0">
+                  <button
+                    onClick={() => { haptics.tap(); setOpenLesson(i); }}
+                    className="w-full flex items-center justify-between gap-3 p-4 text-left"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-accent mb-0.5">
+                        {featured ? "Today's lesson" : lesson.tag}
+                      </div>
+                      <div className="font-semibold leading-snug">{lesson.title}</div>
+                    </div>
+                    <ChevronRight size={18} className="text-fg-subtle shrink-0" />
+                  </button>
+                </Card>
+              );
+            })}
           </div>
         </motion.div>
       </motion.div>
@@ -197,6 +207,9 @@ export function Learn() {
               {LESSONS[openLesson].tag}
             </div>
             <p className="text-[15px] text-fg-muted leading-relaxed">{LESSONS[openLesson].body}</p>
+            <p className="text-[11px] text-fg-subtle mt-4 pt-3 border-t border-border">
+              Source: {LESSONS[openLesson].source}
+            </p>
           </>
         )}
       </Sheet>

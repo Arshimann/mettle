@@ -47,6 +47,7 @@ export function DidYouKnow() {
       >
         <h3 className="text-base font-semibold mb-1">{f.title}</h3>
         <p className="text-sm text-fg-muted leading-relaxed">{f.body}</p>
+        <p className="text-[11px] text-fg-subtle mt-2">Source: {f.source}</p>
       </motion.div>
     </Card>
   );
