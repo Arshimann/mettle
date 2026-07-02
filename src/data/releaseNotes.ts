@@ -8,6 +8,19 @@ export interface ReleaseNote {
  *  "What's new" sheet after an update. */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.9.0',
+    date: '2026-06-22',
+    items: [
+      'No more accidental tab swipes — swiping between tabs now only works from the very top or the bottom bar.',
+      'Tap any dot on a chart to see the exact number and date behind it.',
+      'New starter splits: Bro Split, PHUL, PHAT, Big 3, Push/Pull, Minimalist… and the Bitchsplit. Browse them from the Split tab.',
+      'Custom exercises now save to your library — starred, in the category you pick, ready to use again.',
+      'More single-arm and single-leg movements to log.',
+      'Twice the daily facts, now with sources — and a featured lesson of the day in Learn.',
+      'Timer chimes now actually play on iPhone.',
+    ],
+  },
+  {
     version: '0.8.0',
     date: '2026-06-22',
     items: [
