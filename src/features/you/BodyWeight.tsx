@@ -21,7 +21,7 @@ export function BodyWeight() {
   const latest = sorted[sorted.length - 1];
   const prev = sorted[sorted.length - 2];
   const deltaKg = latest && prev ? latest.weight - prev.weight : null;
-  const chartData = sorted.map((b) => ({ value: b.weight }));
+  const chartData = sorted.map((b) => ({ value: b.weight, label: prettyDate(b.date) }));
 
   const save = () => {
     const n = parseNum(val);
@@ -58,7 +58,7 @@ export function BodyWeight() {
       </div>
 
       {chartData.length >= 2 ? (
-        <LineChart data={chartData} />
+        <LineChart data={chartData} format={(v) => `${fmtWeight(v, units)} ${unitLabel(units)}`} />
       ) : (
         sorted.length > 0 && <p className="text-sm text-fg-muted">One more entry to see a trend.</p>
       )}

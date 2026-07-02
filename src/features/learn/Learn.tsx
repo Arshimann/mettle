@@ -63,7 +63,10 @@ export function Learn() {
       const wk = Math.floor(daysBetween(h.date, today) / 7);
       if (wk >= 0 && wk < 8) weeks[7 - wk] += sessionVolume(h.exercises);
     });
-    const weekly = weeks.map((value) => ({ value: Math.round(fromKg(value, units)) }));
+    const weekly = weeks.map((value, i) => ({
+      value: Math.round(fromKg(value, units)),
+      label: i === 7 ? 'This week' : `${7 - i} wk ago`,
+    }));
 
     const topLifts = [...liftBest.entries()]
       .filter(([, e]) => e > 0)
@@ -104,7 +107,7 @@ export function Learn() {
               <motion.div variants={listItem}>
                 <Card>
                   <CardLabel>Weekly volume · last 8 weeks</CardLabel>
-                  <LineChart data={m.weekly} />
+                  <LineChart data={m.weekly} format={(v) => `${v.toLocaleString()} ${unitLabel(units)}`} />
                 </Card>
               </motion.div>
             )}

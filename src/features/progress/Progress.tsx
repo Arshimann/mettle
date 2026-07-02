@@ -32,7 +32,7 @@ export function Progress() {
       .reverse()
       .flatMap((h) => {
         const ex = h.exercises.find((e) => e.name.toLowerCase() === lower);
-        return ex ? [{ value: bestE1RM(ex.sets) }] : [];
+        return ex ? [{ value: bestE1RM(ex.sets), label: prettyDate(h.date) }] : [];
       });
   }, [history, sel]);
   const bestEver = chartData.length ? Math.max(...chartData.map((d) => d.value)) : 0;
@@ -70,7 +70,7 @@ export function Progress() {
               )}
             </div>
             {chartData.length >= 2 ? (
-              <LineChart data={chartData} />
+              <LineChart data={chartData} format={(v) => `${fmtWeight(v, units)} ${unitLabel(units)}`} />
             ) : (
               <div className="text-sm text-fg-muted py-6 text-center">
                 Log <span className="font-semibold text-fg">{sel}</span> at least twice to see a trend.
