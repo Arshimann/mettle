@@ -8,9 +8,11 @@ import { toKg } from '../lib/units';
 import { DEFAULT_THEME, type ThemeId } from '../theme/themes';
 import { STYLE_DEFS } from '../data/trainingStyles';
 import type { CustomRoutine, CustomStretch } from '../data/stretches';
+import { EXERCISE_LIBRARY } from '../data/exercises';
 import type {
   ActiveSession,
   BodyWeightEntry,
+  CustomExercise,
   DisplayToggles,
   Goal,
   HistoryEntry,
@@ -39,6 +41,7 @@ interface AppData {
   achievements: { id: string; unlockedAt: string }[];
   customStretches: CustomStretch[];
   customRoutines: CustomRoutine[];
+  customExercises: CustomExercise[];
   activeSession: ActiveSession | null;
 }
 
@@ -91,6 +94,9 @@ interface AppActions {
   removeCustomStretch: (id: string) => void;
   addCustomRoutine: (r: Omit<CustomRoutine, 'id'>) => void;
   removeCustomRoutine: (id: string) => void;
+  // custom exercises
+  addCustomExercise: (e: Omit<CustomExercise, 'id'>) => void;
+  removeCustomExercise: (id: string) => void;
   // data
   exportData: () => string;
   importData: (json: string) => boolean;
@@ -132,6 +138,7 @@ const initialData: AppData = {
   achievements: [],
   customStretches: [],
   customRoutines: [],
+  customExercises: [],
   activeSession: null,
 };
 
@@ -307,6 +314,19 @@ export const useStore = create<Store>()(
       removeCustomRoutine: (id) =>
         set((s) => ({ customRoutines: s.customRoutines.filter((x) => x.id !== id) })),
 
+      // ---- custom exercises ----
+      addCustomExercise: (e) =>
+        set((s) => {
+          const name = e.name.trim();
+          const lower = name.toLowerCase();
+          // De-dupe against the built-in library and existing customs.
+          if (!name || EXERCISE_LIBRARY.some((x) => x.name.toLowerCase() === lower)) return {};
+          if (s.customExercises.some((x) => x.name.toLowerCase() === lower)) return {};
+          return { customExercises: [...s.customExercises, { ...e, name, id: uid() }] };
+        }),
+      removeCustomExercise: (id) =>
+        set((s) => ({ customExercises: s.customExercises.filter((x) => x.id !== id) })),
+
       // ---- data portability ----
       exportData: () => {
         const s = get();
@@ -324,6 +344,7 @@ export const useStore = create<Store>()(
           achievements: s.achievements,
           customStretches: s.customStretches,
           customRoutines: s.customRoutines,
+          customExercises: s.customExercises,
           activeSession: s.activeSession,
         };
         return JSON.stringify({ app: 'mettle', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), data: payload }, null, 2);
@@ -357,6 +378,7 @@ export const useStore = create<Store>()(
           achievements: [],
           customStretches: [],
           customRoutines: [],
+          customExercises: [],
           activeSession: null,
           // keep settings + profile
           settings: s.settings,
@@ -402,6 +424,7 @@ export const useStore = create<Store>()(
         achievements: s.achievements,
         customStretches: s.customStretches,
         customRoutines: s.customRoutines,
+        customExercises: s.customExercises,
         activeSession: s.activeSession,
       }),
     },

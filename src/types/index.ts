@@ -1,4 +1,5 @@
 import type { ThemeId } from '../theme/themes';
+import type { MuscleGroup } from '../data/exercises';
 
 export type Units = 'kg' | 'lbs';
 export type Sex = 'male' | 'female' | null;
@@ -81,6 +82,13 @@ export interface Supplement {
   id: string;
   name: string;
   dose?: string;
+}
+
+/** A user-added exercise, saved to the library for future picks. */
+export interface CustomExercise {
+  id: string;
+  name: string;
+  group: MuscleGroup;
 }
 
 export interface Achievement {
