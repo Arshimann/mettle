@@ -4,7 +4,7 @@ export type ScreenId = 'home' | 'split' | 'train' | 'stretch' | 'recovery' | 'pr
 type Tab = Exclude<ScreenId, 'settings'>;
 
 /** Tab order used to derive transition direction (settings is not a tab). */
-export const SCREEN_ORDER: Tab[] = ['home', 'split', 'train', 'stretch', 'recovery', 'progress', 'learn', 'you'];
+export const SCREEN_ORDER: Tab[] = ['home', 'train', 'split', 'learn', 'recovery', 'stretch', 'progress', 'you'];
 
 interface UIState {
   screen: ScreenId;

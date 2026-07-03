@@ -20,12 +20,12 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { id: 'home', label: 'Home', icon: Home },
-  { id: 'split', label: 'Split', icon: LayoutGrid },
   { id: 'train', label: 'Train', icon: Dumbbell },
-  { id: 'stretch', label: 'Stretch', icon: PersonStanding },
-  { id: 'recovery', label: 'Recovery', icon: HeartPulse },
-  { id: 'progress', label: 'Progress', icon: TrendingUp },
+  { id: 'split', label: 'Split', icon: LayoutGrid },
   { id: 'learn', label: 'Learn', icon: GraduationCap },
+  { id: 'recovery', label: 'Recovery', icon: HeartPulse },
+  { id: 'stretch', label: 'Stretch', icon: PersonStanding },
+  { id: 'progress', label: 'Progress', icon: TrendingUp },
   { id: 'you', label: 'You', icon: User },
 ];
 
