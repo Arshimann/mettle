@@ -81,7 +81,18 @@ export function Split() {
     if (!pickerForDay) return;
     const day = dayOf(pickerForDay);
     if (!day || day.exercises.some((e) => e.name.toLowerCase() === name.toLowerCase())) return;
-    updateDay(pickerForDay, { exercises: [...day.exercises, { name }] });
+    // Stamp the user's default target so Train pre-builds sets; editable per row.
+    const { defaultTargetSets, defaultTargetReps } = useStore.getState().settings;
+    updateDay(pickerForDay, {
+      exercises: [
+        ...day.exercises,
+        {
+          name,
+          targetSets: defaultTargetSets > 0 ? defaultTargetSets : undefined,
+          targetReps: defaultTargetReps.trim() || undefined,
+        },
+      ],
+    });
   };
 
   const removeExercise = (dayId: string, idx: number) => {

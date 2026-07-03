@@ -127,6 +127,11 @@ export interface Settings {
   units: Units;
   onboarded: boolean;
   preferredRest: number; // seconds
+  /** Start the rest timer automatically when a set is marked done. */
+  autoRest: boolean;
+  /** Targets stamped onto exercises added in the split builder. */
+  defaultTargetSets: number;
+  defaultTargetReps: string;
   restChime: boolean;
   haptics: boolean;
   trainingStyle: TrainingStyle | null;

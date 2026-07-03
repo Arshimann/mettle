@@ -51,6 +51,7 @@ export function Train() {
   const history = useStore((s) => s.history);
   const units = useStore((s) => s.settings.units);
   const preferredRest = useStore((s) => s.settings.preferredRest);
+  const autoRest = useStore((s) => s.settings.autoRest);
   const startSession = useStore((s) => s.startSession);
   const cancelSession = useStore((s) => s.cancelSession);
   const endSession = useStore((s) => s.endSession);
@@ -229,7 +230,7 @@ export function Train() {
     if (becameDone) {
       haptics.success();
       setFlashReps((f) => (f && f.ei === ei && f.si === si ? null : f));
-      startRest(preferredRest);
+      if (autoRest) startRest(preferredRest);
     } else {
       haptics.tap();
     }

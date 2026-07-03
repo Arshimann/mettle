@@ -87,6 +87,66 @@ export function Settings() {
     <div className="pb-4 space-y-3.5">
       {section === 'profile' && <ProfileSection />}
 
+      {section === 'training' && (
+        <Card className="divide-y divide-border">
+          <Row
+            label="Rest duration"
+            desc="Default countdown between sets"
+            control={
+              <Segmented
+                value={String(settings.preferredRest)}
+                onChange={(v) => updateSettings({ preferredRest: Number(v) })}
+                options={[
+                  { value: '60', label: '1m' },
+                  { value: '90', label: '1.5m' },
+                  { value: '120', label: '2m' },
+                  { value: '180', label: '3m' },
+                ]}
+              />
+            }
+          />
+          <Row
+            label="Auto-start rest timer"
+            desc="Begin resting when you tick a set"
+            control={
+              <Switch
+                checked={settings.autoRest}
+                onChange={(v) => updateSettings({ autoRest: v })}
+                aria-label="Auto-start rest timer"
+              />
+            }
+          />
+          <Row
+            label="Default sets"
+            desc="Stamped on exercises you add to your split"
+            control={
+              <Segmented
+                value={String(settings.defaultTargetSets)}
+                onChange={(v) => updateSettings({ defaultTargetSets: Number(v) })}
+                options={[
+                  { value: '2', label: '2' },
+                  { value: '3', label: '3' },
+                  { value: '4', label: '4' },
+                  { value: '5', label: '5' },
+                ]}
+              />
+            }
+          />
+          <Row
+            label="Default reps"
+            desc="The rep target for new exercises"
+            control={
+              <input
+                value={settings.defaultTargetReps}
+                onChange={(e) => updateSettings({ defaultTargetReps: e.target.value })}
+                className="w-20 h-10 px-2.5 rounded-btn bg-surface-2 border border-border text-[14px] text-center outline-none focus:border-border-strong"
+                aria-label="Default reps"
+              />
+            }
+          />
+        </Card>
+      )}
+
       {section === 'appearance' && (
         <>
           <ThemePicker />
