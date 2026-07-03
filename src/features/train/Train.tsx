@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, Calculator, Check, Dumbbell, Plus, Trash2 } from 'lucide-react';
-import { Button, Card, CardLabel, EmptyState, PageHeader, Stepper } from '../../components/ui';
+import { Button, Card, CardLabel, EmptyState, PageHeader, Sheet, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
@@ -58,6 +58,7 @@ export function Train() {
   const navigate = useUI((s) => s.navigate);
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [celebration, setCelebration] = useState<EndSessionResult | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
@@ -252,8 +253,8 @@ export function Train() {
           <h1 className="text-2xl truncate leading-none">{session.dayName}</h1>
           <div className="text-sm text-fg-muted mt-1.5 tabular">{elapsed} elapsed</div>
         </div>
-        <Button variant="accent" onClick={() => setFinishOpen(true)}>
-          Finish
+        <Button variant="accent" onClick={() => { haptics.warn(); setConfirmEnd(true); }}>
+          End
         </Button>
       </Card>
 
@@ -393,7 +394,7 @@ export function Train() {
         <Plus size={16} /> Add exercise
       </Button>
 
-      <Button variant="accent" size="lg" fullWidth className="mt-3" onClick={() => setFinishOpen(true)}>
+      <Button variant="accent" size="lg" fullWidth className="mt-3" onClick={() => { haptics.warn(); setConfirmEnd(true); }}>
         Finish workout
       </Button>
 
@@ -425,6 +426,30 @@ export function Train() {
         onPick={addExercise}
         exclude={session.exercises.map((e) => e.name)}
       />
+      {/* Both end buttons route through this confirm so nobody ends a session by accident. */}
+      <Sheet open={confirmEnd} onClose={() => setConfirmEnd(false)} title="End workout?">
+        <p className="text-sm text-fg-muted mb-4 -mt-1">
+          {session.exercises.reduce((n, ex) => n + ex.sets.filter((s) => s.done).length, 0)} sets done ·{' '}
+          {elapsed} elapsed. You'll rate and save it next.
+        </p>
+        <div className="space-y-2.5">
+          <Button
+            variant="accent"
+            size="lg"
+            fullWidth
+            onClick={() => {
+              setConfirmEnd(false);
+              setFinishOpen(true);
+            }}
+          >
+            End workout
+          </Button>
+          <Button size="lg" fullWidth onClick={() => setConfirmEnd(false)}>
+            Keep training
+          </Button>
+        </div>
+      </Sheet>
+
       <FinishSheet open={finishOpen} onClose={() => setFinishOpen(false)} onConfirm={handleConfirmFinish} />
       <ExerciseTools
         open={!!tools}
