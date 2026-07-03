@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { Dumbbell, GripVertical, LayoutGrid, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { Button, Card, EmptyState, PageHeader, Sheet, Sortable } from '../../components/ui';
+import { Button, Card, EmptyState, PageHeader, Sheet, Sortable, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { TemplateBrowser } from './TemplateBrowser';
 import { cn } from '../../lib/cn';
@@ -35,6 +35,7 @@ export function Split() {
   const [nameSheet, setNameSheet] = useState<{ id: string | null; value: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [targetSheet, setTargetSheet] = useState<{ dayId: string; idx: number; name: string; sets: string; reps: string } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -184,12 +185,29 @@ export function Split() {
                                         >
                                           <GripVertical size={16} />
                                         </button>
-                                        <span className="flex-1 min-w-0 truncate text-[15px] font-medium">{ex.name}</span>
-                                        {ex.targetSets && (
-                                          <span className="text-[12px] text-fg-subtle shrink-0">
-                                            {ex.targetSets}×{ex.targetReps}
+                                        <button
+                                          onClick={() => {
+                                            haptics.tap();
+                                            setTargetSheet({
+                                              dayId: day.id,
+                                              idx,
+                                              name: ex.name,
+                                              sets: ex.targetSets ? String(ex.targetSets) : '',
+                                              reps: ex.targetReps ?? '',
+                                            });
+                                          }}
+                                          className="flex-1 min-w-0 flex items-center gap-2 text-left"
+                                        >
+                                          <span className="min-w-0 truncate text-[15px] font-medium">{ex.name}</span>
+                                          <span
+                                            className={cn(
+                                              'text-[12px] shrink-0 px-1.5 py-0.5 rounded-md',
+                                              ex.targetSets ? 'text-fg-subtle bg-canvas/60' : 'text-fg-subtle/60',
+                                            )}
+                                          >
+                                            {ex.targetSets ? `${ex.targetSets}×${ex.targetReps || '?'}` : 'sets×reps'}
                                           </span>
-                                        )}
+                                        </button>
                                         <button
                                           onClick={() => removeExercise(day.id, idx)}
                                           className="w-7 h-7 grid place-items-center text-fg-subtle shrink-0"
@@ -225,6 +243,54 @@ export function Split() {
         onPick={addExerciseToDay}
         exclude={pickerDay?.exercises.map((e) => e.name) ?? []}
       />
+
+      {/* Per-exercise target editor: sets × reps used to pre-build the logger. */}
+      <Sheet open={!!targetSheet} onClose={() => setTargetSheet(null)} title={targetSheet?.name}>
+        {targetSheet && (
+          <div className="space-y-3">
+            <div>
+              <div className="text-[13px] font-semibold text-fg-muted mb-1.5">Target sets</div>
+              <Stepper
+                value={targetSheet.sets}
+                onChange={(v) => setTargetSheet({ ...targetSheet, sets: v })}
+                step={1}
+                min={1}
+                placeholder="3"
+                aria-label="Target sets"
+              />
+            </div>
+            <div>
+              <div className="text-[13px] font-semibold text-fg-muted mb-1.5">Target reps</div>
+              <input
+                value={targetSheet.reps}
+                onChange={(e) => setTargetSheet({ ...targetSheet, reps: e.target.value })}
+                placeholder="8–12"
+                className="w-full h-12 px-3.5 rounded-btn bg-surface-2 border border-border text-[15px] outline-none focus:border-border-strong"
+              />
+            </div>
+            <Button
+              variant="accent"
+              size="lg"
+              fullWidth
+              onClick={() => {
+                const day = dayOf(targetSheet.dayId);
+                if (!day) return setTargetSheet(null);
+                const sets = Math.max(1, Math.min(10, Math.round(parseFloat(targetSheet.sets)) || 0)) || undefined;
+                const reps = targetSheet.reps.trim() || undefined;
+                updateDay(targetSheet.dayId, {
+                  exercises: day.exercises.map((x, i) =>
+                    i !== targetSheet.idx ? x : { ...x, targetSets: targetSheet.sets.trim() ? sets : undefined, targetReps: reps },
+                  ),
+                });
+                haptics.success();
+                setTargetSheet(null);
+              }}
+            >
+              Save target
+            </Button>
+          </div>
+        )}
+      </Sheet>
 
       <Sheet open={!!nameSheet} onClose={() => setNameSheet(null)} title={nameSheet?.id ? 'Rename day' : 'New day'}>
         <input

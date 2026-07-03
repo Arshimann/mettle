@@ -214,9 +214,15 @@ export const useStore = create<Store>()(
             dayId: day.id,
             dayName: day.name,
             startedAt: Date.now(),
+            // Seed one row per planned set so the logger opens ready to fill.
             exercises: day.exercises.map((e) => ({
               name: e.name,
-              sets: [{ weight: '', reps: '', done: false }],
+              targetReps: e.targetReps,
+              sets: Array.from({ length: Math.max(1, e.targetSets ?? 1) }, () => ({
+                weight: '',
+                reps: '',
+                done: false,
+              })),
             })),
             restEndsAt: null,
             restDuration: null,

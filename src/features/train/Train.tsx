@@ -263,7 +263,10 @@ export function Train() {
           const lp = lastPerformance(history, ex.name);
           const suggestKg = suggestNextKg(history, ex.name, units);
           const weightPlaceholder = suggestKg != null ? String(fmtWeight(suggestKg, units)) : '0';
-          const repsPlaceholder = lp ? String(lp.top.reps) : '0';
+          // Real last-time reps win; otherwise the planned range from the split.
+          const repsPlaceholder = lp ? String(lp.top.reps) : (ex.targetReps ?? '0');
+          // Fast-fill may only commit plain numbers — a "8–12" range stays a hint.
+          const repsFill = /^\d+(\.\d+)?$/.test(repsPlaceholder) ? repsPlaceholder : undefined;
           const entered = ex.sets.map((s) => parseFloat(s.weight)).filter((n) => !isNaN(n));
           const toolTarget = entered.length
             ? Math.max(...entered)
@@ -350,7 +353,7 @@ export function Train() {
                       F
                     </button>
                     <button
-                      onClick={() => toggleDone(ei, si, weightPlaceholder, repsPlaceholder)}
+                      onClick={() => toggleDone(ei, si, weightPlaceholder, repsFill)}
                       aria-label="Mark set done"
                       className={cn(
                         'w-10 h-11 rounded-btn grid place-items-center shrink-0 border transition-colors',

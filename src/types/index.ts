@@ -147,6 +147,8 @@ export interface ActiveSet {
 
 export interface ActiveExercise {
   name: string;
+  /** Planned rep range from the split (e.g. "8–12") — shown as placeholder. */
+  targetReps?: string;
   sets: ActiveSet[];
 }
 
