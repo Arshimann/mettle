@@ -44,7 +44,11 @@ export function BottomNav() {
                   className="absolute top-0 h-[3px] w-7 rounded-full bg-accent"
                 />
               )}
-              <motion.span animate={{ scale: active ? 1.06 : 1, y: active ? -1 : 0 }} transition={spring}>
+              <motion.span
+                animate={{ scale: active ? 1.06 : 1, y: active ? -1 : 0 }}
+                whileTap={{ scale: 0.82 }}
+                transition={spring}
+              >
                 <Icon
                   size={iconOnly ? 24 : 22}
                   strokeWidth={active ? 2.5 : 2}

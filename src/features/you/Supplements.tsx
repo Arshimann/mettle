@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Check, Pill, Plus, X } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, Sheet } from '../../components/ui';
 import { cn } from '../../lib/cn';
@@ -60,8 +61,11 @@ export function Supplements() {
               const done = takenIds.includes(s.id);
               return (
                 <div key={s.id} className="flex items-center gap-3">
-                  <button
-                    onClick={() => { haptics.tap(); toggle(s.id); }}
+                  <motion.button
+                    onClick={() => { haptics.success(); toggle(s.id); }}
+                    whileTap={{ scale: 0.8 }}
+                    animate={done ? { scale: [1, 1.28, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.32 }}
                     aria-label={`Mark ${s.name} taken`}
                     className={cn(
                       'w-7 h-7 rounded-full grid place-items-center border shrink-0 transition-colors',
@@ -69,9 +73,32 @@ export function Supplements() {
                     )}
                   >
                     <Check size={15} strokeWidth={3} />
-                  </button>
+                  </motion.button>
                   <div className="flex-1 min-w-0">
-                    <div className={cn('font-medium truncate', done && 'line-through text-fg-muted')}>{s.name}</div>
+                    {/* scratch-off: the strike draws itself across the name */}
+                    <div className="relative inline-block max-w-full align-top">
+                      <div className={cn('font-medium truncate transition-colors duration-300', done && 'text-fg-muted')}>
+                        {s.name}
+                      </div>
+                      <svg
+                        className="absolute left-0 top-1/2 w-full -translate-y-1/2 overflow-visible pointer-events-none"
+                        height="3"
+                        viewBox="0 0 100 3"
+                        preserveAspectRatio="none"
+                        aria-hidden="true"
+                      >
+                        <motion.line
+                          x1="0" y1="1.5" x2="100" y2="1.5"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          className="text-fg-muted"
+                          initial={false}
+                          animate={{ pathLength: done ? 1 : 0, opacity: done ? 1 : 0 }}
+                          transition={{ duration: done ? 0.45 : 0.18, ease: 'easeOut' }}
+                        />
+                      </svg>
+                    </div>
                     {s.dose && <div className="text-xs text-fg-subtle">{s.dose}</div>}
                   </div>
                   <button onClick={() => remove(s.id)} className="text-fg-subtle shrink-0" aria-label="Remove supplement">

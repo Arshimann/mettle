@@ -16,5 +16,5 @@ export const listItem: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.42, ease: easeOut } },
 };
 
-/** Press feedback for tappable surfaces. */
-export const tapScale = { scale: 0.97 };
+/** Press feedback for tappable surfaces — firm enough to feel. */
+export const tapScale = { scale: 0.95 };

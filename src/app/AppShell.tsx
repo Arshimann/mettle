@@ -91,11 +91,13 @@ function Header() {
 
         {!inSettings && (
           <div className="relative">
-            <button
+            <motion.button
               onClick={() => {
                 haptics.tap();
                 setMenuOpen((o) => !o);
               }}
+              whileTap={{ rotate: 26, scale: 0.9 }}
+              transition={springPop}
               className={cn(
                 'w-9 h-9 -mr-1.5 grid place-items-center rounded-btn transition-colors',
                 menuOpen ? 'text-accent bg-accent-soft' : 'text-fg-muted',
@@ -104,7 +106,7 @@ function Header() {
               aria-expanded={menuOpen}
             >
               <SettingsIcon size={20} />
-            </button>
+            </motion.button>
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
