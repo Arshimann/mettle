@@ -7,7 +7,7 @@ import { haptics } from '../../lib/haptics';
 import { listContainer, listItem } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
 import { bestE1RM, estimate1RM, sessionVolume } from '../../lib/formulas';
-import { fmtWeight, unitLabel } from '../../lib/units';
+import { distanceLabel, fmtWeight, fromKm, unitLabel } from '../../lib/units';
 import { prettyDate } from '../../lib/date';
 import { LineChart } from './LineChart';
 
@@ -168,7 +168,9 @@ export function Progress() {
                                     )}
                                   >
                                     {isTop && <Star size={11} fill="currentColor" strokeWidth={0} />}
-                                    {fmtWeight(s.weight, units)}×{s.reps}
+                                    {s.durationMin != null
+                                      ? `${s.durationMin} min${s.distanceKm ? ` · ${fromKm(s.distanceKm, units)} ${distanceLabel(units)}` : ''}`
+                                      : `${fmtWeight(s.weight, units)}×${s.reps}`}
                                     {s.toFailure ? ' · F' : ''}
                                   </span>
                                 );

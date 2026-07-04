@@ -8,10 +8,14 @@ export type TrainingStyle = 'crossfit' | 'bodybuilding' | 'strength' | 'all';
 
 /** Weights are always stored canonically in kilograms. */
 export interface SetEntry {
-  weight: number; // kg
-  reps: number; // logged reps (use toFailure flag instead of a sentinel)
+  weight: number; // kg (0 for cardio)
+  reps: number; // logged reps (0 for cardio)
   toFailure?: boolean;
   rpe?: number; // 6–10, optional
+  /** Cardio: minutes logged instead of weight×reps. */
+  durationMin?: number;
+  /** Cardio: optional distance, canonical km. */
+  distanceKm?: number;
 }
 
 export interface ExerciseEntry {
@@ -148,6 +152,9 @@ export interface ActiveSet {
   done: boolean;
   toFailure?: boolean;
   rpe?: number;
+  /** Cardio entry fields (minutes / distance in display units). */
+  duration?: string;
+  distance?: string;
 }
 
 export interface ActiveExercise {

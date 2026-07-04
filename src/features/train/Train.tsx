@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, Calculator, Check, Dumbbell, Plus, Trash2 } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, PageHeader, Sheet, Stepper } from '../../components/ui';
@@ -9,7 +9,8 @@ import { listContainer, listItem } from '../../theme/motion';
 import { useStore, type EndSessionResult } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
 import { lastPerformance, suggestNextKg } from '../../lib/training';
-import { fmtWeight, loadIncrement, unitLabel } from '../../lib/units';
+import { distanceLabel, fmtWeight, loadIncrement, unitLabel } from '../../lib/units';
+import { EXERCISE_LIBRARY } from '../../data/exercises';
 import { fmtDuration } from '../../lib/date';
 import { RestTimer } from './RestTimer';
 import { FinishSheet } from './FinishSheet';
@@ -66,6 +67,15 @@ export function Train() {
   const [tools, setTools] = useState<{ ei: number; name: string; target: number } | null>(null);
   const [flashReps, setFlashReps] = useState<{ ei: number; si: number } | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
+
+  // Cardio exercises log minutes/distance instead of weight×reps.
+  const customExercises = useStore((s) => s.customExercises);
+  const cardioNames = useMemo(() => {
+    const set = new Set<string>();
+    EXERCISE_LIBRARY.forEach((e) => { if (e.group === 'Cardio') set.add(e.name.toLowerCase()); });
+    customExercises.forEach((e) => { if (e.group === 'Cardio') set.add(e.name.toLowerCase()); });
+    return set;
+  }, [customExercises]);
 
   useEffect(() => {
     if (!session) return;
@@ -136,7 +146,7 @@ export function Train() {
   const patchSet = (
     ei: number,
     si: number,
-    patch: Partial<{ weight: string; reps: string; done: boolean; toFailure: boolean }>,
+    patch: Partial<{ weight: string; reps: string; done: boolean; toFailure: boolean; duration: string; distance: string }>,
   ) =>
     update((s) => ({
       ...s,
@@ -151,7 +161,19 @@ export function Train() {
       exercises: s.exercises.map((ex, i) => {
         if (i !== ei) return ex;
         const last = ex.sets[ex.sets.length - 1];
-        return { ...ex, sets: [...ex.sets, { weight: last?.weight ?? '', reps: last?.reps ?? '', done: false }] };
+        return {
+          ...ex,
+          sets: [
+            ...ex.sets,
+            {
+              weight: last?.weight ?? '',
+              reps: last?.reps ?? '',
+              duration: last?.duration ?? '',
+              distance: last?.distance ?? '',
+              done: false,
+            },
+          ],
+        };
       }),
     }));
 
@@ -189,12 +211,20 @@ export function Train() {
     }));
 
   const toggleDone = (ei: number, si: number, wPh?: string, rPh?: string) => {
-    const cur = session.exercises[ei]?.sets[si];
+    const exercise = session.exercises[ei];
+    const cur = exercise?.sets[si];
     if (!cur) return;
     const becameDone = !cur.done;
+    const isCardio = cardioNames.has(exercise.name.toLowerCase());
 
-    // To-failure sets must record the reps you actually hit — never guess them.
-    // Block completion and flag the reps field until a number is entered.
+    // Honest logging: cardio needs real minutes, to-failure needs real reps —
+    // block completion and flag the field instead of guessing.
+    if (becameDone && isCardio && (cur.duration ?? '').trim() === '') {
+      haptics.warn();
+      setFlashReps({ ei, si });
+      setTimeout(() => setFlashReps((f) => (f && f.ei === ei && f.si === si ? null : f)), 2500);
+      return;
+    }
     if (becameDone && cur.toFailure && cur.reps.trim() === '') {
       haptics.warn();
       setFlashReps({ ei, si });
@@ -203,7 +233,8 @@ export function Train() {
     }
 
     // For normal sets, accept the suggested/last values for any empty field so a
-    // quick tap still logs real numbers. F sets keep exactly the reps you typed.
+    // quick tap still logs real numbers. F sets keep exactly the reps you typed;
+    // cardio sets keep exactly the minutes you typed.
     const fill = (val: string, ph?: string) => (val === '' && ph && ph !== '0' ? ph : val);
     update((s) => ({
       ...s,
@@ -216,12 +247,14 @@ export function Train() {
                 j !== si
                   ? st
                   : becameDone
-                    ? {
-                        ...st,
-                        done: true,
-                        weight: fill(st.weight, wPh),
-                        reps: st.toFailure ? st.reps : fill(st.reps, rPh),
-                      }
+                    ? isCardio
+                      ? { ...st, done: true }
+                      : {
+                          ...st,
+                          done: true,
+                          weight: fill(st.weight, wPh),
+                          reps: st.toFailure ? st.reps : fill(st.reps, rPh),
+                        }
                     : { ...st, done: false },
               ),
             },
@@ -230,7 +263,8 @@ export function Train() {
     if (becameDone) {
       haptics.success();
       setFlashReps((f) => (f && f.ei === ei && f.si === si ? null : f));
-      if (autoRest) startRest(preferredRest);
+      // No rest countdown after cardio — you're not racking a bar.
+      if (autoRest && !isCardio) startRest(preferredRest);
     } else {
       haptics.tap();
     }
@@ -261,13 +295,27 @@ export function Train() {
 
       <div className="space-y-3">
         {session.exercises.map((ex, ei) => {
-          const lp = lastPerformance(history, ex.name);
-          const suggestKg = suggestNextKg(history, ex.name, units);
+          const isCardio = cardioNames.has(ex.name.toLowerCase());
+          const lp = isCardio ? null : lastPerformance(history, ex.name);
+          const suggestKg = isCardio ? null : suggestNextKg(history, ex.name, units);
           const weightPlaceholder = suggestKg != null ? String(fmtWeight(suggestKg, units)) : '0';
           // Real last-time reps win; otherwise the planned range from the split.
           const repsPlaceholder = lp ? String(lp.top.reps) : (ex.targetReps ?? '0');
           // Fast-fill may only commit plain numbers — a "8–12" range stays a hint.
           const repsFill = /^\d+(\.\d+)?$/.test(repsPlaceholder) ? repsPlaceholder : undefined;
+          // Cardio context line: your longest bout last time this was logged.
+          const lastCardioMin = isCardio
+            ? (() => {
+                for (const h of history) {
+                  const e = h.exercises.find((x) => x.name.toLowerCase() === ex.name.toLowerCase());
+                  if (e) {
+                    const m = Math.max(0, ...e.sets.map((st) => st.durationMin ?? 0));
+                    if (m > 0) return m;
+                  }
+                }
+                return null;
+              })()
+            : null;
           const entered = ex.sets.map((s) => parseFloat(s.weight)).filter((n) => !isNaN(n));
           const toolTarget = entered.length
             ? Math.max(...entered)
@@ -279,13 +327,15 @@ export function Train() {
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-lg truncate">{ex.name}</h3>
                 <div className="flex items-center shrink-0">
-                  <button
-                    onClick={() => { haptics.tap(); setTools({ ei, name: ex.name, target: toolTarget }); }}
-                    className="w-8 h-8 grid place-items-center text-fg-subtle"
-                    aria-label={`Tools for ${ex.name}`}
-                  >
-                    <Calculator size={16} />
-                  </button>
+                  {!isCardio && (
+                    <button
+                      onClick={() => { haptics.tap(); setTools({ ei, name: ex.name, target: toolTarget }); }}
+                      className="w-8 h-8 grid place-items-center text-fg-subtle"
+                      aria-label={`Tools for ${ex.name}`}
+                    >
+                      <Calculator size={16} />
+                    </button>
+                  )}
                   <button
                     onClick={() => { haptics.tap(); removeExercise(ei); }}
                     className="w-8 h-8 grid place-items-center text-fg-subtle"
@@ -298,7 +348,13 @@ export function Train() {
 
               <div className="flex items-center gap-2 mb-3 text-[13px]">
                 <span className="text-fg-muted">
-                  {lp ? `Last · ${fmtWeight(lp.top.weight, units)}${unitLabel(units)} × ${lp.top.reps}` : 'First time'}
+                  {isCardio
+                    ? lastCardioMin
+                      ? `Last · ${lastCardioMin} min`
+                      : 'First time'
+                    : lp
+                      ? `Last · ${fmtWeight(lp.top.weight, units)}${unitLabel(units)} × ${lp.top.reps}`
+                      : 'First time'}
                 </span>
                 {suggestKg != null && (
                   <button
@@ -319,6 +375,44 @@ export function Train() {
                 {ex.sets.map((set, si) => (
                   <div key={si} className="flex items-center gap-1.5">
                     <span className="w-4 text-center text-sm font-bold text-fg-subtle tabular shrink-0">{si + 1}</span>
+                    {isCardio ? (
+                      <>
+                        <Stepper
+                          value={set.duration ?? ''}
+                          onChange={(v) => patchSet(ei, si, { duration: v })}
+                          step={5}
+                          placeholder={lastCardioMin ? String(lastCardioMin) : 'min'}
+                          aria-label="Minutes"
+                          className={cn(
+                            flashReps?.ei === ei && flashReps?.si === si
+                              ? 'border-danger ring-2 ring-danger/35'
+                              : set.done
+                                ? 'border-accent'
+                                : 'border-border',
+                          )}
+                        />
+                        <Stepper
+                          value={set.distance ?? ''}
+                          onChange={(v) => patchSet(ei, si, { distance: v })}
+                          step={0.5}
+                          decimal
+                          placeholder={distanceLabel(units)}
+                          aria-label="Distance"
+                          className={set.done ? 'border-accent' : 'border-border'}
+                        />
+                        <button
+                          onClick={() => toggleDone(ei, si)}
+                          aria-label="Mark set done"
+                          className={cn(
+                            'w-10 h-11 rounded-btn grid place-items-center shrink-0 border transition-colors',
+                            set.done ? 'bg-accent border-accent text-accent-fg' : 'bg-surface-2 border-border text-fg-subtle',
+                          )}
+                        >
+                          <Check size={18} strokeWidth={3} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
                     <Stepper
                       value={set.weight}
                       onChange={(v) => patchSet(ei, si, { weight: v })}
@@ -363,6 +457,8 @@ export function Train() {
                     >
                       <Check size={18} strokeWidth={3} />
                     </button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

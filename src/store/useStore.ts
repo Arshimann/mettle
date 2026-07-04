@@ -4,7 +4,7 @@ import { SCHEMA_VERSION, STORAGE_KEY } from '../config';
 import { appStorage } from '../lib/storage';
 import { uid } from '../lib/id';
 import { todayStr } from '../lib/date';
-import { toKg } from '../lib/units';
+import { parseNum, toKg, toKm } from '../lib/units';
 import { DEFAULT_THEME, type ThemeId } from '../theme/themes';
 import { STYLE_DEFS } from '../data/trainingStyles';
 import type { CustomRoutine, CustomStretch } from '../data/stretches';
@@ -244,13 +244,30 @@ export const useStore = create<Store>()(
           .map((ex) => ({
             name: ex.name,
             sets: ex.sets
-              .filter((set) => set.done && set.weight !== '' && set.reps !== '')
-              .map((set) => ({
-                weight: toKg(set.weight, units),
-                reps: Number(set.reps) || 0,
-                toFailure: set.toFailure,
-                rpe: set.rpe,
-              })),
+              // A set counts if it's done and carries either weight×reps or (cardio) minutes.
+              .filter(
+                (set) =>
+                  set.done &&
+                  ((set.weight !== '' && set.reps !== '') || (set.duration ?? '').trim() !== ''),
+              )
+              .map((set) => {
+                const mins = (set.duration ?? '').trim() ? parseNum(set.duration!) : NaN;
+                if (!isNaN(mins) && mins > 0) {
+                  const km = (set.distance ?? '').trim() ? toKm(set.distance!, units) : 0;
+                  return {
+                    weight: 0,
+                    reps: 0,
+                    durationMin: Math.round(mins * 10) / 10,
+                    ...(km > 0 ? { distanceKm: km } : {}),
+                  };
+                }
+                return {
+                  weight: toKg(set.weight, units),
+                  reps: Number(set.reps) || 0,
+                  toFailure: set.toFailure,
+                  rpe: set.rpe,
+                };
+              }),
           }))
           .filter((ex) => ex.sets.length > 0);
 
@@ -271,10 +288,13 @@ export const useStore = create<Store>()(
         };
 
         // PR detection: heaviest set per exercise beats stored PR weight.
+        // Cardio sets (weight 0, minutes logged) never create or update PRs.
         const prs = [...s.prs];
         const prHits: string[] = [];
         for (const ex of exercises) {
-          const heaviest = ex.sets.reduce((m, set) => (set.weight > m.weight ? set : m), ex.sets[0]);
+          const liftSets = ex.sets.filter((set) => set.weight > 0);
+          if (liftSets.length === 0) continue;
+          const heaviest = liftSets.reduce((m, set) => (set.weight > m.weight ? set : m), liftSets[0]);
           const idx = prs.findIndex((p) => p.exercise.toLowerCase() === ex.name.toLowerCase());
           if (idx === -1) {
             prs.push({ id: uid(), exercise: ex.name, weight: heaviest.weight, reps: heaviest.reps, date: entry.date });

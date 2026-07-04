@@ -34,3 +34,23 @@ export function fmtWeight(kg: number, units: Units): string {
 export function loadIncrement(units: Units): number {
   return units === 'lbs' ? 5 : 2.5;
 }
+
+// Distance follows the weight unit: metric lifters get km, imperial get miles.
+const MI_PER_KM = 0.621371;
+
+export function distanceLabel(units: Units): string {
+  return units === 'lbs' ? 'mi' : 'km';
+}
+
+/** Display-unit distance → canonical km. */
+export function toKm(display: string | number, units: Units): number {
+  const n = parseNum(display);
+  if (isNaN(n)) return 0;
+  return units === 'lbs' ? Math.round((n / MI_PER_KM) * 100) / 100 : n;
+}
+
+/** Canonical km → display-unit distance. */
+export function fromKm(km: number, units: Units): number {
+  if (km == null || isNaN(km)) return 0;
+  return units === 'lbs' ? Math.round(km * MI_PER_KM * 100) / 100 : Math.round(km * 100) / 100;
+}
