@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, GraduationCap } from 'lucide-react';
-import { Card, CardLabel, CountUp, EmptyState, PageHeader, Sheet } from '../../components/ui';
+import { Card, CardLabel, CountUp, EmptyState, PageHeader, Segmented, Sheet } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { listContainer, listItem } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
@@ -128,11 +128,37 @@ export function Learn() {
   }, [history, units]);
 
   const hasData = history.length > 0;
+  // Stats live under Insights, lessons under Playbook — new users land on lessons.
+  const [tab, setTab] = useState<'insights' | 'playbook'>(hasData ? 'insights' : 'playbook');
 
   return (
     <div>
       <PageHeader title="Learn" subtitle="Your numbers & how to use them" />
-      <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3.5">
+      <div className="mb-3.5">
+        <Segmented
+          fullWidth
+          value={tab}
+          onChange={(v) => { haptics.tap(); setTab(v); }}
+          options={[
+            { value: 'insights', label: 'Insights' },
+            { value: 'playbook', label: 'Playbook' },
+          ]}
+        />
+      </div>
+
+      {tab === 'insights' ? (
+      <motion.div key="insights" variants={listContainer} initial="hidden" animate="show" className="space-y-3.5">
+        {!hasData && (
+          <motion.div variants={listItem}>
+            <Card className="p-0">
+              <EmptyState
+                icon={GraduationCap}
+                title="Metrics unlock as you train"
+                body="Log a few workouts and this fills with your volume, top lifts, and muscle-group balance. Until then, check the playbook."
+              />
+            </Card>
+          </motion.div>
+        )}
         {hasData && (
           <>
             {m.read && (
@@ -214,17 +240,10 @@ export function Learn() {
             )}
           </>
         )}
-
+      </motion.div>
+      ) : (
+      <motion.div key="playbook" variants={listContainer} initial="hidden" animate="show" className="space-y-3.5">
         <motion.div variants={listItem}>
-          {!hasData && (
-            <Card className="p-0 mb-3.5">
-              <EmptyState
-                icon={GraduationCap}
-                title="Metrics unlock as you train"
-                body="Log a few workouts and this fills with your volume, top lifts, and muscle-group balance. Until then, here's the playbook."
-              />
-            </Card>
-          )}
           <div className="flex items-center gap-1.5 text-accent mb-2 px-0.5">
             <GraduationCap size={16} />
             <CardLabel className="mb-0 text-accent">The playbook</CardLabel>
@@ -254,6 +273,7 @@ export function Learn() {
           </div>
         </motion.div>
       </motion.div>
+      )}
 
       <Sheet
         open={openLesson !== null}
