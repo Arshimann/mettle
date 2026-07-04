@@ -9,21 +9,51 @@ import { useStore } from '../../store/useStore';
 import { bestE1RM, estimate1RM, sessionVolume } from '../../lib/formulas';
 import { distanceLabel, fmtWeight, fromKm, unitLabel } from '../../lib/units';
 import { prettyDate } from '../../lib/date';
+import { EXERCISE_LIBRARY, MUSCLE_GROUPS, type MuscleGroup } from '../../data/exercises';
 import { LineChart } from './LineChart';
+
+const LIB_GROUP = new Map(EXERCISE_LIBRARY.map((e) => [e.name.toLowerCase(), e.group]));
+
+type TrendGroup = MuscleGroup | 'Other';
 
 export function Progress() {
   const prs = useStore((s) => s.prs);
   const history = useStore((s) => s.history);
+  const customExercises = useStore((s) => s.customExercises);
   const units = useStore((s) => s.settings.units);
 
-  const exerciseNames = useMemo(() => {
-    const set = new Set<string>();
-    history.forEach((h) => h.exercises.forEach((e) => set.add(e.name)));
-    return [...set];
-  }, [history]);
+  // Group every logged exercise by muscle group so the trend picker is
+  // two-level (group → exercise) instead of one endless chip row.
+  // Cardio is excluded — minutes have no e1RM trend.
+  const trendGroups = useMemo(() => {
+    const groupOf = (name: string): TrendGroup => {
+      const lower = name.toLowerCase();
+      const g = LIB_GROUP.get(lower) ?? customExercises.find((c) => c.name.toLowerCase() === lower)?.group;
+      return g ?? 'Other';
+    };
+    const byGroup = new Map<TrendGroup, string[]>();
+    const seen = new Set<string>();
+    history.forEach((h) =>
+      h.exercises.forEach((e) => {
+        const key = e.name.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        const g = groupOf(e.name);
+        if (g === 'Cardio') return;
+        byGroup.set(g, [...(byGroup.get(g) ?? []), e.name]);
+      }),
+    );
+    const order: TrendGroup[] = [...MUSCLE_GROUPS.filter((g) => g !== 'Cardio'), 'Other'];
+    return order.filter((g) => (byGroup.get(g) ?? []).length > 0).map((g) => ({ group: g, names: byGroup.get(g)! }));
+  }, [history, customExercises]);
 
+  const [selGroup, setSelGroup] = useState<TrendGroup | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const sel = selected && exerciseNames.includes(selected) ? selected : (exerciseNames[0] ?? null);
+
+  const activeGroup =
+    (selGroup && trendGroups.find((t) => t.group === selGroup)) || trendGroups[0] || null;
+  const sel =
+    selected && activeGroup?.names.includes(selected) ? selected : (activeGroup?.names[0] ?? null);
 
   const chartData = useMemo(() => {
     if (!sel) return [];
@@ -76,9 +106,27 @@ export function Progress() {
                 Log <span className="font-semibold text-fg">{sel}</span> at least twice to see a trend.
               </div>
             )}
-            {exerciseNames.length > 1 && (
+            {trendGroups.length > 1 && (
               <div className="flex gap-1.5 overflow-x-auto no-scrollbar mt-3 -mx-1 px-1">
-                {exerciseNames.map((n) => (
+                {trendGroups.map((t) => (
+                  <button
+                    key={t.group}
+                    onClick={() => { haptics.tap(); setSelGroup(t.group); }}
+                    className={cn(
+                      'shrink-0 px-3 h-8 rounded-full text-[12px] font-bold uppercase tracking-wide border transition-colors',
+                      t.group === activeGroup?.group
+                        ? 'bg-fg text-canvas border-fg'
+                        : 'bg-surface-2 text-fg-muted border-border',
+                    )}
+                  >
+                    {t.group}
+                  </button>
+                ))}
+              </div>
+            )}
+            {activeGroup && activeGroup.names.length > 1 && (
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar mt-2 -mx-1 px-1">
+                {activeGroup.names.map((n) => (
                   <button
                     key={n}
                     onClick={() => { haptics.tap(); setSelected(n); }}
