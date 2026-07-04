@@ -79,7 +79,42 @@ export function Learn() {
     const groups = MUSCLE_GROUPS.map((g) => ({ g, v: groupVol.get(g) ?? 0 })).filter((x) => x.v > 0);
     const groupMax = groups.reduce((mx, x) => Math.max(mx, x.v), 0) || 1;
 
+    // ---- Coach's read: last 4 weeks, only once there's enough data to judge ----
+    const recent = history.filter((h) => {
+      const d = daysBetween(h.date, today);
+      return d >= 0 && d < 28;
+    });
+    let read: null | { dominant: string; dominantPct: number; weak: string; weakPct: number; missing: string | null; topLift: string | null } = null;
+    if (recent.length >= 6) {
+      const recVol = new Map<MuscleGroup, number>();
+      recent.forEach((h) =>
+        h.exercises.forEach((ex) => {
+          const g = GROUP_OF.get(ex.name.toLowerCase());
+          if (!g || g === 'Cardio') return;
+          ex.sets.forEach((st) => recVol.set(g, (recVol.get(g) ?? 0) + st.weight * st.reps));
+        }),
+      );
+      const trained = [...recVol.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+      const total = trained.reduce((s2, [, v]) => s2 + v, 0);
+      if (trained.length >= 2 && total > 0) {
+        const [domG, domV] = trained[0];
+        const [weakG, weakV] = trained[trained.length - 1];
+        // A big group they never touch is a louder signal than a small share.
+        const majors: MuscleGroup[] = ['Chest', 'Back', 'Legs', 'Shoulders'];
+        const missing = majors.find((g) => !recVol.get(g)) ?? null;
+        read = {
+          dominant: domG,
+          dominantPct: Math.round((domV / total) * 100),
+          weak: weakG,
+          weakPct: Math.round((weakV / total) * 100),
+          missing,
+          topLift: topLifts[0]?.[0] ?? null,
+        };
+      }
+    }
+
     return {
+      read,
       sets,
       reps,
       volume: Math.round(fromKg(volKg, units)),
@@ -100,6 +135,30 @@ export function Learn() {
       <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3.5">
         {hasData && (
           <>
+            {m.read && (
+              <motion.div variants={listItem}>
+                <Card>
+                  <CardLabel>Coach's read · last 4 weeks</CardLabel>
+                  <div className="space-y-2 mt-1">
+                    <p className="text-sm leading-relaxed">
+                      <span className="font-semibold">{m.read.dominant}</span> is where your work goes —{' '}
+                      {m.read.dominantPct}% of your recent volume
+                      {m.read.topLift ? (
+                        <>
+                          , led by <span className="font-semibold">{m.read.topLift}</span>
+                        </>
+                      ) : null}
+                      .
+                    </p>
+                    <p className="text-sm leading-relaxed text-fg-muted">
+                      {m.read.missing
+                        ? `${m.read.missing} hasn't been trained in four weeks — that's a hole worth filling.`
+                        : `${m.read.weak} is only ${m.read.weakPct}% of your volume. One more ${m.read.weak.toLowerCase()} session a week would balance you out.`}
+                    </p>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
             <motion.div variants={listItem} className="grid grid-cols-3 gap-3.5">
               <Stat value={m.workouts} label="Workouts" />
               <Stat value={m.volume} label={`${unitLabel(units)} lifted`} />
