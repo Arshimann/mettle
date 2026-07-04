@@ -1,14 +1,24 @@
 /**
- * Pose data for the stretch stick-figure. Kept in its own module so the
- * component file can stay component-only (Fast Refresh) and so pickers can
- * import the kind list without pulling in the renderer.
+ * Pose data for the stretch figure, v2.
+ *
+ * The figure is a 13-joint skeleton: a 4-point spine chain (neck → chest →
+ * waist → pelvis) that can genuinely round and arch, plus two-segment limbs
+ * drawn as quadratic curves (the joint is the control point, so elbows and
+ * knees bend organically instead of kinking). Each kind is authored as one
+ * carefully-posed "deep" keyframe; the second keyframe is derived by easing
+ * every joint slightly toward standing, which reads as breathing into the
+ * stretch. Kinds where that drift would look wrong (cat-cow, twists, neck
+ * rolls, dead hang) author their own second keyframe.
  */
 
 export type Pt = [number, number];
-export type Joints = {
-  head: Pt;
-  sho: Pt;
-  hip: Pt;
+
+export interface Pose {
+  head: Pt; // head circle center
+  neck: Pt;
+  chest: Pt;
+  waist: Pt;
+  pelvis: Pt;
   elbowL: Pt;
   handL: Pt;
   elbowR: Pt;
@@ -17,37 +27,7 @@ export type Joints = {
   footL: Pt;
   kneeR: Pt;
   footR: Pt;
-};
-
-// Bones connect named joints; the head is drawn as a separate dot.
-export const BONES: [keyof Joints, keyof Joints][] = [
-  ['sho', 'head'],
-  ['sho', 'hip'],
-  ['sho', 'elbowL'],
-  ['elbowL', 'handL'],
-  ['sho', 'elbowR'],
-  ['elbowR', 'handR'],
-  ['hip', 'kneeL'],
-  ['kneeL', 'footL'],
-  ['hip', 'kneeR'],
-  ['kneeR', 'footR'],
-];
-
-const STAND: Joints = {
-  head: [60, 20],
-  sho: [60, 38],
-  hip: [60, 66],
-  elbowL: [49, 53],
-  handL: [47, 67],
-  elbowR: [71, 53],
-  handR: [73, 67],
-  kneeL: [54, 87],
-  footL: [54, 107],
-  kneeR: [66, 87],
-  footR: [66, 107],
-};
-
-const mk = (over: Partial<Joints>): Joints => ({ ...STAND, ...over });
+}
 
 export type FigureKind =
   | 'stand'
@@ -69,162 +49,233 @@ export type FigureKind =
   | 'butterfly'
   | 'downward-dog';
 
-const CAT_COW_LIMBS = {
-  elbowL: [44, 84] as Pt,
-  handL: [44, 99] as Pt,
-  elbowR: [47, 84] as Pt,
-  handR: [47, 99] as Pt,
-  kneeL: [80, 86] as Pt,
-  footL: [80, 99] as Pt,
-  kneeR: [83, 86] as Pt,
-  footR: [83, 99] as Pt,
+const STAND: Pose = {
+  head: [60, 17],
+  neck: [60, 27],
+  chest: [60, 39],
+  waist: [60, 52],
+  pelvis: [60, 64],
+  elbowL: [53, 49],
+  handL: [51, 61],
+  elbowR: [67, 49],
+  handR: [69, 61],
+  kneeL: [56, 86],
+  footL: [55, 106],
+  kneeR: [64, 86],
+  footR: [65, 106],
 };
 
-export const POSES: Record<FigureKind, [Joints, Joints]> = {
-  stand: [
-    STAND,
-    mk({ head: [60, 18], sho: [60, 37], elbowL: [48, 52], handL: [46, 66], elbowR: [72, 52], handR: [74, 66] }),
-  ],
-  'forward-fold': [
-    STAND,
-    mk({ head: [60, 74], sho: [60, 58], hip: [60, 64], elbowL: [53, 76], handL: [53, 96], elbowR: [67, 76], handR: [67, 96] }),
-  ],
-  'seated-fold': [
-    {
-      head: [46, 44], sho: [46, 60], hip: [46, 82],
-      elbowL: [55, 66], handL: [64, 74], elbowR: [55, 70], handR: [64, 78],
-      kneeL: [66, 84], footL: [90, 86], kneeR: [66, 88], footR: [90, 90],
+const mk = (over: Partial<Pose>): Pose => ({ ...STAND, ...over });
+
+const lerp = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+
+/** Ease every joint a touch toward standing — the "breathe out" keyframe. */
+function relax(pose: Pose, t = 0.16): Pose {
+  const out = {} as Pose;
+  (Object.keys(pose) as (keyof Pose)[]).forEach((k) => {
+    out[k] = lerp(pose[k], STAND[k], t);
+  });
+  return out;
+}
+
+/** Deep pose (a) + optional authored counter-pose (b, defaults to relax(a)). */
+const DEFS: Record<FigureKind, { a: Pose; b?: Pose }> = {
+  stand: {
+    a: STAND,
+    b: mk({ head: [60, 15], neck: [60, 25], chest: [60, 37], handL: [50, 59], handR: [70, 59] }),
+  },
+  'forward-fold': {
+    a: {
+      head: [42, 88], neck: [45, 80], chest: [49, 72], waist: [55, 62], pelvis: [62, 58],
+      elbowL: [43, 92], handL: [44, 102], elbowR: [47, 93], handR: [48, 103],
+      kneeL: [59, 82], footL: [58, 105], kneeR: [65, 82], footR: [64, 105],
     },
-    {
-      head: [58, 56], sho: [52, 64], hip: [46, 82],
-      elbowL: [68, 72], handL: [82, 82], elbowR: [68, 76], handR: [82, 86],
-      kneeL: [66, 84], footL: [90, 86], kneeR: [66, 88], footR: [90, 90],
+  },
+  'seated-fold': {
+    a: {
+      head: [69, 68], neck: [64, 72], chest: [57, 77], waist: [49, 84], pelvis: [42, 92],
+      elbowL: [72, 82], handL: [84, 90], elbowR: [74, 84], handR: [86, 92],
+      kneeL: [66, 92], footL: [94, 94], kneeR: [68, 95], footR: [96, 97],
     },
-  ],
-  doorway: [
-    mk({ elbowL: [42, 40], handL: [36, 30], elbowR: [78, 40], handR: [84, 30] }),
-    mk({ head: [60, 22], sho: [60, 40], hip: [62, 66], elbowL: [40, 42], handL: [34, 33], elbowR: [80, 42], handR: [86, 33], kneeL: [52, 87], kneeR: [64, 85] }),
-  ],
-  cobra: [
-    {
-      head: [48, 92], sho: [54, 95], hip: [80, 99],
-      elbowL: [58, 98], handL: [60, 103], elbowR: [58, 99], handR: [60, 104],
-      kneeL: [94, 101], footL: [108, 101], kneeR: [94, 103], footR: [108, 103],
+  },
+  doorway: {
+    a: mk({
+      chest: [61, 38],
+      elbowL: [44, 33], handL: [39, 21], elbowR: [77, 33], handR: [82, 21],
+    }),
+  },
+  cobra: {
+    a: {
+      head: [43, 64], neck: [46, 72], chest: [52, 81], waist: [63, 91], pelvis: [77, 97],
+      elbowL: [51, 92], handL: [55, 102], elbowR: [54, 93], handR: [58, 103],
+      kneeL: [91, 100], footL: [106, 101], kneeR: [93, 102], footR: [108, 103],
     },
-    {
-      head: [44, 76], sho: [52, 86], hip: [80, 99],
-      elbowL: [58, 94], handL: [62, 103], elbowR: [58, 95], handR: [62, 104],
-      kneeL: [94, 101], footL: [108, 101], kneeR: [94, 103], footR: [108, 103],
+  },
+  'cat-cow': {
+    // Cat: spine arched to the ceiling…
+    a: {
+      head: [36, 80], neck: [42, 73], chest: [51, 67], waist: [65, 66], pelvis: [80, 74],
+      elbowL: [45, 87], handL: [45, 100], elbowR: [48, 88], handR: [48, 101],
+      kneeL: [82, 100], footL: [95, 102], kneeR: [85, 101], footR: [98, 103],
     },
-  ],
-  'cat-cow': [
-    { head: [34, 66], sho: [44, 72], hip: [80, 74], ...CAT_COW_LIMBS },
-    { head: [40, 82], sho: [46, 76], hip: [80, 67], ...CAT_COW_LIMBS },
-  ],
-  'child-pose': [
-    {
-      head: [40, 84], sho: [52, 82], hip: [78, 90],
-      elbowL: [34, 84], handL: [22, 88], elbowR: [34, 86], handR: [22, 90],
-      kneeL: [80, 96], footL: [92, 98], kneeR: [82, 96], footR: [92, 100],
+    // …cow: belly drops, gaze lifts.
+    b: {
+      head: [34, 66], neck: [41, 71], chest: [51, 79], waist: [65, 84], pelvis: [80, 76],
+      elbowL: [45, 87], handL: [45, 100], elbowR: [48, 88], handR: [48, 101],
+      kneeL: [82, 100], footL: [95, 102], kneeR: [85, 101], footR: [98, 103],
     },
-    {
-      head: [38, 86], sho: [52, 84], hip: [78, 90],
-      elbowL: [33, 86], handL: [20, 90], elbowR: [33, 88], handR: [20, 92],
-      kneeL: [80, 96], footL: [92, 98], kneeR: [82, 96], footR: [92, 100],
+  },
+  'child-pose': {
+    a: {
+      head: [40, 86], neck: [47, 84], chest: [55, 83], waist: [67, 86], pelvis: [79, 92],
+      elbowL: [33, 90], handL: [22, 93], elbowR: [36, 92], handR: [25, 95],
+      kneeL: [83, 102], footL: [95, 104], kneeR: [86, 103], footR: [98, 105],
     },
-  ],
-  'deep-squat': [
-    STAND,
-    mk({ hip: [60, 80], sho: [60, 58], head: [60, 40], kneeL: [46, 88], footL: [50, 107], kneeR: [74, 88], footR: [70, 107], elbowL: [50, 66], handL: [54, 76], elbowR: [70, 66], handR: [66, 76] }),
-  ],
-  'dead-hang': [
-    {
-      head: [60, 40], sho: [60, 48], hip: [60, 74],
-      elbowL: [57, 33], handL: [55, 20], elbowR: [63, 33], handR: [65, 20],
-      kneeL: [57, 92], footL: [57, 110], kneeR: [63, 92], footR: [63, 110],
+  },
+  'deep-squat': {
+    a: {
+      head: [58, 36], neck: [58, 45], chest: [58, 53], waist: [59, 65], pelvis: [60, 78],
+      elbowL: [49, 62], handL: [51, 73], elbowR: [67, 62], handR: [65, 73],
+      kneeL: [43, 84], footL: [47, 106], kneeR: [77, 84], footR: [73, 106],
     },
-    {
-      head: [60, 42], sho: [60, 50], hip: [60, 77],
-      elbowL: [57, 33], handL: [55, 20], elbowR: [63, 33], handR: [65, 20],
-      kneeL: [58, 95], footL: [58, 112], kneeR: [62, 95], footR: [62, 112],
+  },
+  'dead-hang': {
+    a: {
+      head: [60, 37], neck: [60, 46], chest: [60, 56], waist: [60, 68], pelvis: [60, 79],
+      elbowL: [55, 28], handL: [54, 14], elbowR: [65, 28], handR: [66, 14],
+      kneeL: [58, 95], footL: [57, 111], kneeR: [62, 95], footR: [63, 111],
     },
-  ],
-  'spinal-twist': [
-    mk({ elbowL: [48, 48], handL: [64, 46], elbowR: [72, 56], handR: [58, 60] }),
-    mk({ elbowL: [72, 48], handL: [56, 46], elbowR: [48, 56], handR: [62, 60] }),
-  ],
-  lunge: [
-    {
-      head: [58, 34], sho: [58, 48], hip: [60, 68],
-      elbowL: [50, 58], handL: [48, 72], elbowR: [66, 58], handR: [68, 72],
-      kneeL: [44, 86], footL: [40, 106], kneeR: [80, 90], footR: [100, 106],
+    b: {
+      head: [60, 39], neck: [60, 48], chest: [60, 58], waist: [60, 70], pelvis: [60, 81],
+      elbowL: [55, 28], handL: [54, 14], elbowR: [65, 28], handR: [66, 14],
+      kneeL: [58, 97], footL: [57, 113], kneeR: [62, 97], footR: [63, 113],
     },
-    {
-      head: [58, 40], sho: [58, 54], hip: [60, 74],
-      elbowL: [50, 64], handL: [48, 78], elbowR: [66, 64], handR: [68, 78],
-      kneeL: [42, 88], footL: [40, 106], kneeR: [84, 94], footR: [104, 107],
+  },
+  'spinal-twist': {
+    a: mk({
+      head: [63, 16],
+      elbowL: [71, 44], handL: [79, 51], elbowR: [50, 55], handR: [42, 47],
+    }),
+    b: mk({
+      head: [57, 16],
+      elbowL: [49, 44], handL: [41, 51], elbowR: [70, 55], handR: [78, 47],
+    }),
+  },
+  lunge: {
+    a: {
+      head: [59, 27], neck: [59, 36], chest: [60, 45], waist: [59, 57], pelvis: [58, 70],
+      elbowL: [52, 53], handL: [54, 64], elbowR: [67, 53], handR: [65, 64],
+      kneeL: [45, 86], footL: [43, 106], kneeR: [77, 88], footR: [97, 104],
     },
-  ],
-  'quad-pull': [
-    mk({ elbowR: [74, 58], handR: [74, 72], kneeR: [66, 88], footR: [66, 84] }),
-    mk({ head: [60, 19], elbowR: [76, 66], handR: [74, 72], kneeR: [68, 90], footR: [74, 74], handL: [40, 58], elbowL: [44, 50] }),
-  ],
-  'calf-wall': [
-    {
-      head: [58, 30], sho: [56, 44], hip: [64, 66],
-      elbowL: [44, 40], handL: [32, 34], elbowR: [46, 46], handR: [32, 46],
-      kneeL: [58, 86], footL: [56, 107], kneeR: [78, 88], footR: [92, 107],
+  },
+  'quad-pull': {
+    a: mk({
+      head: [59, 16],
+      elbowL: [47, 43], handL: [38, 36],
+      elbowR: [72, 53], handR: [71, 67],
+      kneeL: [58, 86], footL: [58, 106],
+      kneeR: [66, 88], footR: [70, 68],
+    }),
+  },
+  'calf-wall': {
+    a: {
+      head: [45, 26], neck: [48, 33], chest: [51, 42], waist: [57, 53], pelvis: [63, 64],
+      elbowL: [38, 39], handL: [29, 35], elbowR: [41, 46], handR: [30, 44],
+      kneeL: [57, 84], footL: [52, 104], kneeR: [76, 86], footR: [93, 106],
     },
-    {
-      head: [52, 32], sho: [52, 46], hip: [66, 66],
-      elbowL: [42, 42], handL: [32, 34], elbowR: [44, 48], handR: [32, 46],
-      kneeL: [58, 86], footL: [56, 107], kneeR: [82, 90], footR: [98, 107],
+  },
+  'overhead-reach': {
+    a: {
+      head: [70, 19], neck: [67, 28], chest: [64, 39], waist: [59, 52], pelvis: [59, 64],
+      elbowL: [58, 22], handL: [62, 11], elbowR: [71, 21], handR: [77, 11],
+      kneeL: [56, 86], footL: [55, 106], kneeR: [64, 86], footR: [65, 106],
     },
-  ],
-  'overhead-reach': [
-    mk({ elbowL: [57, 24], handL: [56, 12], elbowR: [63, 24], handR: [64, 12] }),
-    mk({ head: [66, 22], sho: [64, 38], hip: [58, 66], elbowL: [66, 24], handL: [70, 14], elbowR: [60, 30], handR: [58, 18], kneeL: [54, 87], kneeR: [66, 87] }),
-  ],
-  neck: [mk({ head: [54, 20] }), mk({ head: [66, 20] })],
-  bridge: [
-    {
-      head: [30, 96], sho: [42, 94], hip: [68, 95],
-      elbowL: [38, 98], handL: [30, 99], elbowR: [40, 99], handR: [30, 100],
-      kneeL: [84, 86], footL: [90, 100], kneeR: [84, 88], footR: [92, 100],
+  },
+  neck: {
+    a: mk({ head: [67, 18] }),
+    b: mk({ head: [53, 18] }),
+  },
+  bridge: {
+    a: {
+      head: [26, 99], neck: [32, 97], chest: [40, 91], waist: [52, 83], pelvis: [64, 79],
+      elbowL: [36, 102], handL: [26, 104], elbowR: [39, 103], handR: [29, 105],
+      kneeL: [79, 84], footL: [85, 102], kneeR: [82, 86], footR: [88, 103],
     },
-    {
-      head: [30, 96], sho: [43, 92], hip: [68, 80],
-      elbowL: [38, 98], handL: [30, 99], elbowR: [40, 99], handR: [30, 100],
-      kneeL: [84, 86], footL: [90, 100], kneeR: [84, 88], footR: [92, 100],
+  },
+  butterfly: {
+    a: {
+      head: [60, 47], neck: [60, 56], chest: [60, 64], waist: [60, 76], pelvis: [60, 88],
+      elbowL: [50, 78], handL: [56, 92], elbowR: [70, 78], handR: [64, 92],
+      kneeL: [42, 89], footL: [58, 96], kneeR: [78, 89], footR: [62, 96],
     },
-  ],
-  butterfly: [
-    {
-      head: [60, 48], sho: [60, 62], hip: [60, 86],
-      elbowL: [52, 74], handL: [52, 86], elbowR: [68, 74], handR: [68, 86],
-      kneeL: [44, 84], footL: [58, 94], kneeR: [76, 84], footR: [62, 94],
+    b: {
+      head: [60, 49], neck: [60, 58], chest: [60, 66], waist: [60, 77], pelvis: [60, 88],
+      elbowL: [50, 79], handL: [56, 92], elbowR: [70, 79], handR: [64, 92],
+      kneeL: [46, 87], footL: [58, 96], kneeR: [74, 87], footR: [62, 96],
     },
-    {
-      head: [60, 50], sho: [60, 64], hip: [60, 86],
-      elbowL: [52, 76], handL: [52, 88], elbowR: [68, 76], handR: [68, 88],
-      kneeL: [40, 92], footL: [58, 94], kneeR: [80, 92], footR: [62, 94],
+  },
+  'downward-dog': {
+    a: {
+      head: [41, 75], neck: [46, 68], chest: [52, 61], waist: [61, 52], pelvis: [70, 45],
+      elbowL: [36, 87], handL: [28, 100], elbowR: [39, 89], handR: [31, 102],
+      kneeL: [80, 66], footL: [92, 96], kneeR: [83, 68], footR: [95, 98],
     },
-  ],
-  'downward-dog': [
-    {
-      head: [40, 70], sho: [44, 64], hip: [60, 46],
-      elbowL: [37, 80], handL: [30, 98], elbowR: [39, 80], handR: [32, 98],
-      kneeL: [74, 74], footL: [88, 98], kneeR: [76, 74], footR: [90, 98],
-    },
-    {
-      head: [42, 72], sho: [44, 64], hip: [60, 42],
-      elbowL: [37, 80], handL: [30, 98], elbowR: [39, 80], handR: [32, 98],
-      kneeL: [74, 74], footL: [88, 98], kneeR: [76, 74], footR: [90, 98],
-    },
-  ],
+  },
 };
 
 /** Every figure kind, for pickers. */
-export const FIGURE_KINDS = Object.keys(POSES) as FigureKind[];
+export const FIGURE_KINDS = Object.keys(DEFS) as FigureKind[];
 
-export const FIGURE_LOOP = { duration: 2.6, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' } as const;
+export const FIGURE_LOOP = { duration: 2.8, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' } as const;
+
+// ---- path building -------------------------------------------------------
+
+const f = (n: number) => n.toFixed(1);
+
+/** Smooth open curve through points (Catmull-Rom → cubic Bézier). */
+function smooth(pts: Pt[]): string {
+  if (pts.length < 2) return '';
+  let d = `M${f(pts[0][0])} ${f(pts[0][1])}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const c1: Pt = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2: Pt = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C${f(c1[0])} ${f(c1[1])}, ${f(c2[0])} ${f(c2[1])}, ${f(p2[0])} ${f(p2[1])}`;
+  }
+  return d;
+}
+
+/** Limb: quadratic curve with the joint as control — organic elbow/knee bend. */
+const limb = (from: Pt, joint: Pt, to: Pt): string =>
+  `M${f(from[0])} ${f(from[1])} Q${f(joint[0])} ${f(joint[1])}, ${f(to[0])} ${f(to[1])}`;
+
+export interface FigurePaths {
+  spine: string; // neck → chest → waist → pelvis
+  armL: string;
+  armR: string;
+  legL: string;
+  legR: string;
+  head: Pt;
+  neck: Pt;
+}
+
+export function posePaths(p: Pose): FigurePaths {
+  return {
+    spine: smooth([p.neck, p.chest, p.waist, p.pelvis]),
+    armL: limb(p.chest, p.elbowL, p.handL),
+    armR: limb(p.chest, p.elbowR, p.handR),
+    legL: limb(p.pelvis, p.kneeL, p.footL),
+    legR: limb(p.pelvis, p.kneeR, p.footR),
+    head: p.head,
+    neck: p.neck,
+  };
+}
+
+/** Two renderable keyframes for a kind. */
+export function figureFrames(kind: FigureKind): [FigurePaths, FigurePaths] {
+  const def = DEFS[kind] ?? DEFS.stand;
+  return [posePaths(def.a), posePaths(def.b ?? relax(def.a))];
+}
