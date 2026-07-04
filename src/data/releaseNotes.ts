@@ -8,6 +8,21 @@ export interface ReleaseNote {
  *  "What's new" sheet after an update. */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.10.0',
+    date: '2026-07-04',
+    items: [
+      'Finishing a workout is a moment now — fireworks, your session stats, and a rotating quote (stoics and gym legends included).',
+      'Set targets in the split builder (tap an exercise → sets × reps) and Train opens with all your sets ready to fill.',
+      'Cardio finally logs like cardio: minutes and distance instead of weight × reps.',
+      'New tab order, and both end-workout buttons now ask before ending.',
+      'Settings → Training: default rest, auto-start rest timer, and default targets.',
+      'Progress trends are grouped by muscle now — way easier to navigate.',
+      "Learn split into Insights and Playbook, plus a Coach's read on what you should train more.",
+      'Stretch figures completely redrawn, and the guided player got a new look.',
+      'Sound effects everywhere (toggle in Settings → Feel) and snappier animations throughout.',
+    ],
+  },
+  {
     version: '0.9.0',
     date: '2026-06-22',
     items: [
