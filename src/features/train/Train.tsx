@@ -9,7 +9,9 @@ import { listContainer, listItem } from '../../theme/motion';
 import { useStore, type EndSessionResult } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
 import { lastPerformance, suggestNextKg } from '../../lib/training';
-import { distanceLabel, fmtWeight, loadIncrement, unitLabel } from '../../lib/units';
+import { distanceLabel, fmtWeight, fromKg, loadIncrement, unitLabel } from '../../lib/units';
+import { sessionVolume } from '../../lib/formulas';
+import { quoteForCount } from '../../data/quotes';
 import { EXERCISE_LIBRARY } from '../../data/exercises';
 import { fmtDuration } from '../../lib/date';
 import { RestTimer } from './RestTimer';
@@ -25,20 +27,59 @@ function Celebration({
   result: EndSessionResult;
   onDone: () => void;
 }) {
+  const units = useStore((s) => s.settings.units);
+  const workoutCount = useStore((s) => s.history.length);
+  const quote = quoteForCount(workoutCount);
+  const hasPR = result.prHits.length > 0;
+  const sets = result.entry.exercises.reduce((n, ex) => n + ex.sets.length, 0);
+  const vol = Math.round(fromKg(sessionVolume(result.entry.exercises), units));
+
   return (
     <div className="fixed inset-0 z-[70] bg-canvas flex flex-col items-center justify-center px-8 text-center overflow-hidden">
-      <Confetti />
+      <Confetti big={hasPR} />
       <motion.div
         initial={{ scale: 0.6, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 320, damping: 18 }}
         className="w-20 h-20 rounded-[24px] bg-accent text-accent-fg grid place-items-center mb-6 shadow-pop"
       >
-        <Award size={40} />
+        {hasPR ? <Award size={40} /> : <Check size={40} strokeWidth={3} />}
       </motion.div>
-      <h1 className="text-4xl mb-2">New PR!</h1>
-      <p className="text-fg-muted mb-1">You set a personal record on</p>
-      <p className="text-lg font-semibold mb-8">{result.prHits.join(', ')}</p>
+      <h1 className="text-4xl mb-2">{hasPR ? 'New PR!' : 'Workout complete'}</h1>
+      {hasPR ? (
+        <>
+          <p className="text-fg-muted mb-1">You set a personal record on</p>
+          <p className="text-lg font-semibold mb-5">{result.prHits.join(', ')}</p>
+        </>
+      ) : (
+        <p className="text-fg-muted mb-5">{result.entry.dayName || 'Session'} in the books.</p>
+      )}
+
+      <div className="flex items-center gap-6 mb-7">
+        <div>
+          <div className="text-2xl font-bold tabular leading-none">{result.entry.exercises.length}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-fg-subtle mt-1">Exercises</div>
+        </div>
+        <div>
+          <div className="text-2xl font-bold tabular leading-none">{sets}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-fg-subtle mt-1">Sets</div>
+        </div>
+        <div>
+          <div className="text-2xl font-bold tabular leading-none">{vol.toLocaleString()}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-fg-subtle mt-1">{unitLabel(units)} vol</div>
+        </div>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.4 }}
+        className="max-w-[24rem] mb-8"
+      >
+        <p className="text-[15px] leading-relaxed italic">“{quote.text}”</p>
+        {quote.by && <p className="text-[12px] text-fg-subtle mt-1.5">— {quote.by}</p>}
+      </motion.div>
+
       <Button variant="accent" size="lg" onClick={onDone} className="px-8">
         View progress
       </Button>
@@ -273,11 +314,9 @@ export function Train() {
   const handleConfirmFinish = (meta: { rating?: number; note?: string }) => {
     const result = endSession(meta);
     setFinishOpen(false);
-    if (result && result.prHits.length > 0) {
-      setCelebration(result);
-    } else {
-      navigate(result ? 'progress' : 'home');
-    }
+    // Every saved workout gets the celebration moment — PRs stack on top.
+    if (result) setCelebration(result);
+    else navigate('home');
   };
 
   return (
