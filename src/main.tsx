@@ -6,13 +6,16 @@ import './index.css';
 import App from './App.tsx';
 import { useStore } from './store/useStore';
 import { setHapticsEnabled } from './lib/haptics';
-import { initAudio } from './lib/sound';
+import { initAudio, setSoundFxEnabled } from './lib/sound';
 
-// Keep the haptics flag in sync with the setting — at boot AND whenever it
-// changes (Settings toggle, data import, cloud sync). Previously only set
-// once at boot, so toggling haptics didn't apply until a full reload.
+// Keep the haptics + sound-effect flags in sync with settings — at boot AND
+// whenever they change (Settings toggle, data import, cloud sync).
 setHapticsEnabled(useStore.getState().settings.haptics);
-useStore.subscribe((s) => setHapticsEnabled(s.settings.haptics));
+setSoundFxEnabled(useStore.getState().settings.soundFx);
+useStore.subscribe((s) => {
+  setHapticsEnabled(s.settings.haptics);
+  setSoundFxEnabled(s.settings.soundFx);
+});
 
 // Unlock the shared AudioContext on the first user gesture so timer chimes
 // are audible on iOS (contexts started outside a gesture stay suspended).

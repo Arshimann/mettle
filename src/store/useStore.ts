@@ -116,6 +116,7 @@ const initialData: AppData = {
     defaultTargetReps: '8–12',
     restChime: true,
     haptics: true,
+    soundFx: true,
     trainingStyle: null,
     lastSeenVersion: '',
     tabs: { split: true, stretch: true, recovery: false, progress: true, learn: false },

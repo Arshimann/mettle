@@ -204,6 +204,17 @@ export function Settings() {
             }
           />
           <Row
+            label="Sound effects"
+            desc="Ticks, pops & the finish fanfare"
+            control={
+              <Switch
+                checked={settings.soundFx}
+                onChange={(v) => updateSettings({ soundFx: v })}
+                aria-label="Sound effects"
+              />
+            }
+          />
+          <Row
             label="Rest timer chime"
             desc="Sound when rest ends"
             control={

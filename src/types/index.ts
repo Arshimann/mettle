@@ -138,6 +138,8 @@ export interface Settings {
   defaultTargetReps: string;
   restChime: boolean;
   haptics: boolean;
+  /** UI sound effects (ticks, pops, fanfare). Rest chime has its own toggle. */
+  soundFx: boolean;
   trainingStyle: TrainingStyle | null;
   tabs: TabToggles;
   display: DisplayToggles;

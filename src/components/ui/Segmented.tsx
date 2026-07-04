@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '../../lib/cn';
 import { spring } from '../../theme/motion';
 import { haptics } from '../../lib/haptics';
+import { sfxTick } from '../../lib/sound';
 
 interface Option<T extends string> {
   value: T;
@@ -41,6 +42,7 @@ export function Segmented<T extends string>({
             onClick={() => {
               if (!active) {
                 haptics.select();
+                sfxTick();
                 onChange(o.value);
               }
             }}

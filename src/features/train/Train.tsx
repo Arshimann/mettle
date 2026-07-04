@@ -11,6 +11,7 @@ import { useUI } from '../../store/useUI';
 import { lastPerformance, suggestNextKg } from '../../lib/training';
 import { distanceLabel, fmtWeight, fromKg, loadIncrement, unitLabel } from '../../lib/units';
 import { sessionVolume } from '../../lib/formulas';
+import { sfxFanfare, sfxSetDone, sfxSparkle } from '../../lib/sound';
 import { quoteForCount } from '../../data/quotes';
 import { EXERCISE_LIBRARY } from '../../data/exercises';
 import { fmtDuration } from '../../lib/date';
@@ -33,6 +34,12 @@ function Celebration({
   const hasPR = result.prHits.length > 0;
   const sets = result.entry.exercises.reduce((n, ex) => n + ex.sets.length, 0);
   const vol = Math.round(fromKg(sessionVolume(result.entry.exercises), units));
+
+  // Fanfare + glitter under the fireworks, once per celebration.
+  useEffect(() => {
+    sfxFanfare();
+    sfxSparkle();
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[70] bg-canvas flex flex-col items-center justify-center px-8 text-center overflow-hidden">
@@ -303,6 +310,7 @@ export function Train() {
     }));
     if (becameDone) {
       haptics.success();
+      sfxSetDone();
       setFlashReps((f) => (f && f.ei === ei && f.si === si ? null : f));
       // No rest countdown after cardio — you're not racking a bar.
       if (autoRest && !isCardio) startRest(preferredRest);

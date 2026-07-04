@@ -34,6 +34,116 @@ export function initAudio(): void {
   window.addEventListener('touchend', unlock, { passive: true });
 }
 
+// ---- UI sound-effects palette -------------------------------------------
+// All synthesized on the shared context; every effect is short (<0.5s), quiet,
+// and gated by the global "Sound effects" setting (kept in sync from main.tsx,
+// like haptics). The rest-timer chime below keeps its own separate toggle.
+
+let fxEnabled = true;
+
+export function setSoundFxEnabled(v: boolean): void {
+  fxEnabled = v;
+}
+
+const lastPlayed = new Map<string, number>();
+
+/** One synth note. */
+function note(
+  freq: number,
+  at: number,
+  dur: number,
+  peak: number,
+  type: OscillatorType = 'sine',
+) {
+  const c = getCtx();
+  if (!c) return;
+  if (c.state === 'suspended') void c.resume().catch(() => {});
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.connect(g);
+  g.connect(c.destination);
+  o.type = type;
+  o.frequency.value = freq;
+  const t = c.currentTime + at;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.start(t);
+  o.stop(t + dur + 0.02);
+  o.onended = () => {
+    o.disconnect();
+    g.disconnect();
+  };
+}
+
+/** Debounced, toggle-gated entry point for every effect. */
+function fx(name: string, play: () => void, gapMs = 140) {
+  if (!fxEnabled) return;
+  const now = Date.now();
+  if (now - (lastPlayed.get(name) ?? 0) < gapMs) return;
+  lastPlayed.set(name, now);
+  try {
+    play();
+  } catch {
+    /* audio unavailable */
+  }
+}
+
+/** Soft UI blip — settings cog, segmented switches. */
+export const sfxTick = () => fx('tick', () => note(1250, 0, 0.05, 0.05, 'triangle'));
+
+/** Satisfying check-off pop — supplements. */
+export const sfxPop = () =>
+  fx('pop', () => {
+    const c = getCtx();
+    if (!c) return;
+    if (c.state === 'suspended') void c.resume().catch(() => {});
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.connect(g);
+    g.connect(c.destination);
+    o.type = 'sine';
+    const t = c.currentTime;
+    o.frequency.setValueAtTime(900, t);
+    o.frequency.exponentialRampToValueAtTime(420, t + 0.09);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.14, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    o.start(t);
+    o.stop(t + 0.13);
+    o.onended = () => {
+      o.disconnect();
+      g.disconnect();
+    };
+  });
+
+/** Two rising notes when a set is ticked done. */
+export const sfxSetDone = () =>
+  fx('setDone', () => {
+    note(660, 0, 0.09, 0.1);
+    note(990, 0.07, 0.12, 0.1);
+  });
+
+/** Short ascending arpeggio for finishing a workout. */
+export const sfxFanfare = () =>
+  fx(
+    'fanfare',
+    () => {
+      [523, 659, 784, 1046].forEach((f, i) => note(f, i * 0.09, 0.22, 0.13));
+    },
+    600,
+  );
+
+/** High glittery blips layered under the fireworks. */
+export const sfxSparkle = () =>
+  fx(
+    'sparkle',
+    () => {
+      [1567, 2093, 1760, 2349, 1976].forEach((f, i) => note(f, 0.15 + i * 0.11, 0.1, 0.05, 'triangle'));
+    },
+    600,
+  );
+
 export function playChime(freq = 880) {
   try {
     const c = getCtx();

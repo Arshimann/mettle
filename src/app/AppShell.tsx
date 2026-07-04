@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Settings as SettingsIcon } from 'lucide-reac
 import { APP_NAME } from '../config';
 import { cn } from '../lib/cn';
 import { haptics } from '../lib/haptics';
+import { sfxTick } from '../lib/sound';
 import { springPop } from '../theme/motion';
 import { useUI, type ScreenId } from '../store/useUI';
 import { SETTINGS_SECTIONS } from '../features/settings/sections';
@@ -94,6 +95,7 @@ function Header() {
             <motion.button
               onClick={() => {
                 haptics.tap();
+                sfxTick();
                 setMenuOpen((o) => !o);
               }}
               whileTap={{ rotate: 26, scale: 0.9 }}
@@ -126,6 +128,7 @@ function Header() {
                         key={item.id}
                         onClick={() => {
                           haptics.select();
+                          sfxTick();
                           navigate('settings', { section: item.id });
                           setMenuOpen(false);
                         }}

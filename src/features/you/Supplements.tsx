@@ -4,6 +4,7 @@ import { Check, Pill, Plus, X } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, Sheet } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
+import { sfxPop } from '../../lib/sound';
 import { useStore } from '../../store/useStore';
 import { todayStr } from '../../lib/date';
 
@@ -62,7 +63,11 @@ export function Supplements() {
               return (
                 <div key={s.id} className="flex items-center gap-3">
                   <motion.button
-                    onClick={() => { haptics.success(); toggle(s.id); }}
+                    onClick={() => {
+                      haptics.success();
+                      if (!done) sfxPop(); // check gets the pop; uncheck stays quiet
+                      toggle(s.id);
+                    }}
                     whileTap={{ scale: 0.8 }}
                     animate={done ? { scale: [1, 1.28, 1] } : { scale: 1 }}
                     transition={{ duration: 0.32 }}
