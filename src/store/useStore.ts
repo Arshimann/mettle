@@ -5,7 +5,7 @@ import { appStorage } from '../lib/storage';
 import { uid } from '../lib/id';
 import { todayStr } from '../lib/date';
 import { parseNum, toKg, toKm } from '../lib/units';
-import { DEFAULT_THEME, type ThemeId } from '../theme/themes';
+import { DEFAULT_THEME, normalizeTheme, type ThemeMode } from '../theme/themes';
 import { STYLE_DEFS } from '../data/trainingStyles';
 import type { CustomRoutine, CustomStretch } from '../data/stretches';
 import { EXERCISE_LIBRARY } from '../data/exercises';
@@ -52,7 +52,7 @@ export interface EndSessionResult {
 
 interface AppActions {
   // settings
-  setTheme: (theme: ThemeId) => void;
+  setTheme: (theme: ThemeMode) => void;
   setUnits: (units: Settings['units']) => void;
   updateSettings: (patch: Partial<Settings>) => void;
   toggleDisplay: (key: keyof DisplayToggles) => void;
@@ -105,6 +105,10 @@ interface AppActions {
 
 export type Store = AppData & AppActions;
 
+/** Sanity ceiling for logged numbers (4 digits) — the UI already clamps typed
+ *  input; this guards every commit path (imports, fast-fill, future callers). */
+const cap = (n: number, max = 9999) => Math.min(Math.max(0, n), max);
+
 const initialData: AppData = {
   settings: {
     theme: DEFAULT_THEME,
@@ -119,7 +123,7 @@ const initialData: AppData = {
     soundFx: true,
     trainingStyle: null,
     lastSeenVersion: '',
-    tabs: { split: true, stretch: true, recovery: false, progress: true, learn: false },
+    tabs: { split: true, stretch: true, recovery: false, progress: true, learn: false, friends: true },
     display: {
       stats: true,
       dayCards: true,
@@ -254,17 +258,17 @@ export const useStore = create<Store>()(
               .map((set) => {
                 const mins = (set.duration ?? '').trim() ? parseNum(set.duration!) : NaN;
                 if (!isNaN(mins) && mins > 0) {
-                  const km = (set.distance ?? '').trim() ? toKm(set.distance!, units) : 0;
+                  const km = (set.distance ?? '').trim() ? cap(toKm(set.distance!, units), 999) : 0;
                   return {
                     weight: 0,
                     reps: 0,
-                    durationMin: Math.round(mins * 10) / 10,
+                    durationMin: cap(Math.round(mins * 10) / 10),
                     ...(km > 0 ? { distanceKm: km } : {}),
                   };
                 }
                 return {
-                  weight: toKg(set.weight, units),
-                  reps: Number(set.reps) || 0,
+                  weight: cap(toKg(set.weight, units)),
+                  reps: cap(Number(set.reps) || 0),
                   toFailure: set.toFailure,
                   rpe: set.rpe,
                 };
@@ -311,11 +315,13 @@ export const useStore = create<Store>()(
       },
 
       // ---- prs ----
-      addPR: (pr) => set((s) => ({ prs: [{ ...pr, id: uid() }, ...s.prs] })),
+      addPR: (pr) =>
+        set((s) => ({ prs: [{ ...pr, weight: cap(pr.weight), reps: cap(pr.reps), id: uid() }, ...s.prs] })),
       removePR: (id) => set((s) => ({ prs: s.prs.filter((p) => p.id !== id) })),
 
       // ---- body weight ----
-      addBodyWeight: (entry) => set((s) => ({ bodyWeight: [...s.bodyWeight, { ...entry, id: uid() }] })),
+      addBodyWeight: (entry) =>
+        set((s) => ({ bodyWeight: [...s.bodyWeight, { ...entry, weight: cap(entry.weight), id: uid() }] })),
       removeBodyWeight: (id) => set((s) => ({ bodyWeight: s.bodyWeight.filter((b) => b.id !== id) })),
 
       // ---- goals ----
@@ -384,12 +390,13 @@ export const useStore = create<Store>()(
           const parsed = JSON.parse(json);
           const data = (parsed?.data ?? parsed) as Partial<AppData>;
           if (!data || typeof data !== 'object') return false;
-          set((s) => ({
-            ...s,
-            ...data,
-            settings: { ...s.settings, ...(data.settings ?? {}) },
-            profile: { ...s.profile, ...(data.profile ?? {}) },
-          }));
+          set((s) => {
+            const settings = { ...s.settings, ...(data.settings ?? {}) };
+            // Imported blobs (manual backups, cloud sync from an old build) can
+            // carry retired theme ids — importData bypasses the persist migration.
+            settings.theme = normalizeTheme(settings.theme);
+            return { ...s, ...data, settings, profile: { ...s.profile, ...(data.profile ?? {}) } };
+          });
           return true;
         } catch {
           return false;
@@ -419,6 +426,15 @@ export const useStore = create<Store>()(
       name: STORAGE_KEY,
       version: SCHEMA_VERSION,
       storage: createJSONStorage(() => appStorage),
+      // v1 → v2: the four-theme system collapsed into one signature look with
+      // dark/light modes. Old picks map to the nearest scene.
+      migrate: (persisted, version) => {
+        if (version < 2) {
+          const p = persisted as Partial<AppData> | undefined;
+          if (p?.settings) p.settings.theme = normalizeTheme(p.settings.theme);
+        }
+        return persisted as AppData;
+      },
       // Deep-merge persisted state over defaults so settings added in later
       // versions (tabs, trainingStyle, display.upNext, …) always have a value.
       merge: (persisted, current) => {

@@ -5,8 +5,9 @@ import { Button, Card, CardLabel, EmptyState, PageHeader, Sheet, Stepper } from 
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
-import { listContainer, listItem } from '../../theme/motion';
+import { listContainer, listItem, revealBlur } from '../../theme/motion';
 import { useStore, type EndSessionResult } from '../../store/useStore';
+import { useSocial } from '../../store/useSocial';
 import { useUI } from '../../store/useUI';
 import { lastPerformance, suggestNextKg } from '../../lib/training';
 import { distanceLabel, fmtWeight, fromKg, loadIncrement, unitLabel } from '../../lib/units';
@@ -41,56 +42,82 @@ function Celebration({
     sfxSparkle();
   }, []);
 
+  const popIn = {
+    hidden: { scale: 0.5, opacity: 0 },
+    show: { scale: 1, opacity: 1, transition: { type: 'spring' as const, stiffness: 320, damping: 18 } },
+  };
+  const stat = (value: string | number, label: string) => (
+    <motion.div variants={revealBlur}>
+      <div className="text-[30px] font-display font-bold tabular leading-none">{value}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle mt-1.5">{label}</div>
+    </motion.div>
+  );
+
   return (
-    <div className="fixed inset-0 z-[70] bg-canvas flex flex-col items-center justify-center px-8 text-center overflow-hidden">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="fixed inset-0 z-[70] bg-canvas flex flex-col items-center justify-center px-8 text-center overflow-hidden"
+    >
+      {/* Accent bloom rising behind the badge — the "light comes up" beat. */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1.1 }}
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse 90% 60% at 50% 28%, var(--accent-soft), transparent 65%)' }}
+      />
       <Confetti big={hasPR} />
       <motion.div
-        initial={{ scale: 0.6, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 18 }}
-        className="w-20 h-20 rounded-[24px] bg-accent text-accent-fg grid place-items-center mb-6 shadow-pop"
+        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.16, delayChildren: 0.2 } } }}
+        initial="hidden"
+        animate="show"
+        className="relative flex flex-col items-center"
       >
-        {hasPR ? <Award size={40} /> : <Check size={40} strokeWidth={3} />}
+        <motion.div variants={popIn} className="relative mb-6">
+          <div
+            className="absolute -inset-6 rounded-full opacity-80"
+            style={{ background: 'radial-gradient(circle, var(--accent-soft), transparent 70%)', filter: 'blur(10px)' }}
+          />
+          <div className="relative w-20 h-20 rounded-[24px] bg-accent bg-accent-grad text-accent-fg grid place-items-center shadow-hero">
+            {hasPR ? <Award size={40} /> : <Check size={40} strokeWidth={3} />}
+          </div>
+        </motion.div>
+
+        <motion.h1 variants={revealBlur} className="display-hero mb-2">
+          {hasPR ? 'New PR!' : 'Workout complete'}
+        </motion.h1>
+
+        {hasPR ? (
+          <motion.div variants={revealBlur} className="mb-6">
+            <p className="text-fg-muted mb-1">You set a personal record on</p>
+            <p className="text-lg font-semibold">{result.prHits.join(', ')}</p>
+          </motion.div>
+        ) : (
+          <motion.p variants={revealBlur} className="text-fg-muted mb-6">
+            {result.entry.dayName || 'Session'} in the books.
+          </motion.p>
+        )}
+
+        <div className="flex items-center gap-7 mb-7">
+          {stat(result.entry.exercises.length, 'Exercises')}
+          {stat(sets, 'Sets')}
+          {stat(vol.toLocaleString(), `${unitLabel(units)} vol`)}
+        </div>
+
+        <motion.div variants={revealBlur} className="max-w-[24rem] mb-8">
+          <p className="text-[15px] leading-relaxed italic">“{quote.text}”</p>
+          {quote.by && <p className="text-[12px] text-fg-subtle mt-1.5">— {quote.by}</p>}
+        </motion.div>
+
+        <motion.div variants={revealBlur}>
+          <Button variant="accent" size="lg" onClick={onDone} className="px-8">
+            View progress
+          </Button>
+        </motion.div>
       </motion.div>
-      <h1 className="text-4xl mb-2">{hasPR ? 'New PR!' : 'Workout complete'}</h1>
-      {hasPR ? (
-        <>
-          <p className="text-fg-muted mb-1">You set a personal record on</p>
-          <p className="text-lg font-semibold mb-5">{result.prHits.join(', ')}</p>
-        </>
-      ) : (
-        <p className="text-fg-muted mb-5">{result.entry.dayName || 'Session'} in the books.</p>
-      )}
-
-      <div className="flex items-center gap-6 mb-7">
-        <div>
-          <div className="text-2xl font-bold tabular leading-none">{result.entry.exercises.length}</div>
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-fg-subtle mt-1">Exercises</div>
-        </div>
-        <div>
-          <div className="text-2xl font-bold tabular leading-none">{sets}</div>
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-fg-subtle mt-1">Sets</div>
-        </div>
-        <div>
-          <div className="text-2xl font-bold tabular leading-none">{vol.toLocaleString()}</div>
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-fg-subtle mt-1">{unitLabel(units)} vol</div>
-        </div>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, duration: 0.4 }}
-        className="max-w-[24rem] mb-8"
-      >
-        <p className="text-[15px] leading-relaxed italic">“{quote.text}”</p>
-        {quote.by && <p className="text-[12px] text-fg-subtle mt-1.5">— {quote.by}</p>}
-      </motion.div>
-
-      <Button variant="accent" size="lg" onClick={onDone} className="px-8">
-        View progress
-      </Button>
-    </div>
+    </motion.div>
   );
 }
 
@@ -167,7 +194,7 @@ export function Train() {
             {split.map((day) => (
               <motion.div key={day.id} variants={listItem}>
                 <Card className="flex items-center gap-3 p-4">
-                  <div className="w-10 h-10 rounded-btn bg-surface-2 grid place-items-center text-fg-muted shrink-0">
+                  <div className="w-10 h-10 rounded-btn bg-accent-soft grid place-items-center text-accent shrink-0">
                     <Dumbbell size={18} />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -323,21 +350,31 @@ export function Train() {
     const result = endSession(meta);
     setFinishOpen(false);
     // Every saved workout gets the celebration moment — PRs stack on top.
-    if (result) setCelebration(result);
-    else navigate('home');
+    if (result) {
+      // Fire-and-forget: friends see the workout without holding up the party.
+      useSocial.getState().publishFinishedWorkout(result.entry, result.prHits);
+      setCelebration(result);
+    } else navigate('home');
   };
 
   return (
     <div>
-      <Card className="flex items-center justify-between mb-3.5 py-3.5">
-        <div className="min-w-0">
-          <CardLabel className="mb-0.5">In progress</CardLabel>
-          <h1 className="text-2xl truncate leading-none">{session.dayName}</h1>
-          <div className="text-sm text-fg-muted mt-1.5 tabular">{elapsed} elapsed</div>
+      <Card className="mb-3.5 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <CardLabel className="mb-0.5">In progress</CardLabel>
+            <h1 className="text-xl truncate leading-tight">{session.dayName}</h1>
+          </div>
+          <Button variant="accent" onClick={() => { haptics.warn(); setConfirmEnd(true); }}>
+            End
+          </Button>
         </div>
-        <Button variant="accent" onClick={() => { haptics.warn(); setConfirmEnd(true); }}>
-          End
-        </Button>
+        <div
+          className="text-[34px] font-display font-bold tabular leading-none mt-2.5"
+          style={{ fontStretch: '110%' }}
+        >
+          {elapsed}
+        </div>
       </Card>
 
       <div className="space-y-3">
@@ -442,6 +479,7 @@ export function Train() {
                           value={set.distance ?? ''}
                           onChange={(v) => patchSet(ei, si, { distance: v })}
                           step={0.5}
+                          max={999}
                           decimal
                           placeholder={distanceLabel(units)}
                           aria-label="Distance"

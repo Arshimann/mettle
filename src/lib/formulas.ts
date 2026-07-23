@@ -144,8 +144,14 @@ export interface Consistency {
 
 /** 12-week (default) training heatmap, columns are weeks, rows are weekdays. */
 export function consistency(history: HistoryEntry[], weeks = 12): Consistency {
+  return consistencyFromDates(history.map((h) => h.date), weeks);
+}
+
+/** Same heatmap from a bare list of ISO dates (e.g. a friend's published
+ *  trained_dates snapshot). */
+export function consistencyFromDates(dateList: string[], weeks = 12): Consistency {
   const today = fromISO(todayStr());
-  const dates = new Set(history.map((h) => h.date));
+  const dates = new Set(dateList);
   const totalDays = weeks * 7;
   const cells: ConsistencyCell[] = [];
   for (let i = totalDays - 1; i >= 0; i--) {

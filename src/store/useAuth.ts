@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from './useStore';
+import { useSocial } from './useSocial';
 import { markLocalChange, pushToCloud, pullFromCloud } from '../lib/sync';
 
 export type AuthStatus = 'loading' | 'signed-in' | 'signed-out';
@@ -66,15 +67,25 @@ export const useAuth = create<AuthState>((set, get) => ({
             ? { syncStatus: 'synced', lastSyncedAt: res.at ?? new Date().toISOString(), error: null }
             : { syncStatus: 'error', error: res.message },
         );
+        // Streak/PRs/customs may have changed with any edit — refresh the
+        // public snapshot alongside the private blob.
+        if (res.ok) useSocial.getState().republish();
       }, 2500);
     });
 
     // React to sign-in / sign-out / token refresh / the initial restored session.
     supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
+        const userId = session.user.id;
         set({ status: 'signed-in', user: session.user, email: session.user.email ?? null });
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') void get().syncNow();
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          // Social boots after sync so backfill sees the reconciled history.
+          void get()
+            .syncNow()
+            .then(() => useSocial.getState().init(userId));
+        }
       } else {
+        useSocial.getState().teardown();
         set({ status: 'signed-out', user: null, email: null, syncStatus: 'idle' });
       }
     });

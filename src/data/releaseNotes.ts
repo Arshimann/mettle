@@ -8,6 +8,22 @@ export interface ReleaseNote {
  *  "What's new" sheet after an update. */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '1.0.0',
+    date: '2026-07-23',
+    items: [
+      'Mettle 1.0 — a whole new look. One cinematic identity: deep black, glowing accents, film grain, a new display typeface, and a floating nav. Light mode included (Settings → Appearance: Dark / Light / System).',
+      'Friends. Add people by share code or name, see who’s online — or training right now — and keep each other honest.',
+      'React to your friends’ workouts with 💪 🔥 👏, and talk trash (or spot form) in comments.',
+      'Visit a friend’s profile: their streak, consistency calendar, PRs, and recent sessions.',
+      'Compare progress head-to-head — estimated-1RM trends and calendars, side by side.',
+      'Borrow their custom movements straight into your own library.',
+      'Real profile pictures, plus privacy switches for exactly what friends can see.',
+      'New install guide with illustrated steps for iPhone and Android — get Mettle on your home screen in ten seconds (Settings → About).',
+      'The finish celebration got the film treatment: staged reveal, glow, bigger numbers.',
+      'Weight and reps are now capped at 4 digits, so a slipped finger can’t log a 123,456 kg bench.',
+    ],
+  },
+  {
     version: '0.10.0',
     date: '2026-07-04',
     items: [

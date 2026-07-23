@@ -17,10 +17,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-surface/85 backdrop-blur-xl"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed z-40 inset-x-4 mx-auto max-w-[560px] rounded-full border border-border bg-surface/80 backdrop-blur-2xl shadow-float"
+      style={{ bottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
     >
-      <div className="max-w-[640px] mx-auto flex items-stretch h-[60px]">
+      <div className="flex items-stretch h-[62px] px-1.5">
         {items.map((item) => {
           const active = screen === item.id;
           const Icon = item.icon;
@@ -33,7 +33,7 @@ export function BottomNav() {
                   navigate(item.id);
                 }
               }}
-              className="relative flex-1 flex flex-col items-center justify-center gap-1 outline-none"
+              className="relative flex-1 flex flex-col items-center justify-center gap-0.5 outline-none"
               aria-label={item.label}
               aria-current={active ? 'page' : undefined}
             >
@@ -41,10 +41,12 @@ export function BottomNav() {
                 <motion.span
                   layoutId="nav-indicator"
                   transition={spring}
-                  className="absolute top-0 h-[3px] w-7 rounded-full bg-accent"
+                  className="absolute inset-x-1 inset-y-1.5 rounded-full bg-accent-soft"
+                  style={{ boxShadow: 'var(--accent-glow)' }}
                 />
               )}
               <motion.span
+                className="relative z-10"
                 animate={{ scale: active ? 1.06 : 1, y: active ? -1 : 0 }}
                 whileTap={{ scale: 0.82 }}
                 transition={spring}
@@ -58,7 +60,7 @@ export function BottomNav() {
               {!iconOnly && (
                 <span
                   className={cn(
-                    'text-[10px] font-semibold tracking-tight whitespace-nowrap',
+                    'relative z-10 text-[10px] font-semibold tracking-tight whitespace-nowrap',
                     active ? 'text-fg' : 'text-fg-subtle',
                   )}
                 >

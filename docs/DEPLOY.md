@@ -64,7 +64,11 @@ up and synced across devices. Email + password sign-in.
 2. **SQL Editor** → run the migrations **in order**:
    - paste and run `supabase/migrations/0001_init.sql` (creates the `profiles` table),
    - then paste and run `supabase/migrations/0002_sync.sql` (the row-level security
-     policies + timestamp trigger that let a user read/write *only their own* data).
+     policies + timestamp trigger that let a user read/write *only their own* data),
+   - then paste and run `supabase/migrations/0003_social.sql` (the Friends feature:
+     shared profiles, published workouts, requests, reactions/comments + their policies),
+   - then paste and run `supabase/migrations/0004_storage.sql` (the public `avatars`
+     bucket for profile pictures, with per-user write access).
 3. **Authentication → Sign In / Providers → Email**: make sure **Email** is enabled.
    For a frictionless personal app, turn **Confirm email** *off* — then sign-up logs
    you straight in. (Leave it on if you'd rather verify emails; users then have to
@@ -83,5 +87,8 @@ Once those env vars are present, a "Backup & sync" section appears in Settings a
 first-launch screen offers sign up / log in (still skippable — "Continue offline").
 
 > Keys: the `anon` key is safe to ship in a client app. Never expose the `service_role` key.
-> The `friendships` / `workout_reactions` / `workout_comments` tables from 0001 stay
-> locked (no policies) — they're for a future social phase and aren't used yet.
+> Social data model: friends can only ever read your `shared_profiles` snapshot and
+> published `workouts` rows — the `profiles.user_data` sync blob stays owner-only.
+> Privacy toggles are enforced at publish time (private fields upload as empty).
+> The Friends tab and Settings → Friends & privacy only appear in builds where the
+> Supabase env vars are set; local-first builds hide the whole feature.

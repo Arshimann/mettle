@@ -51,12 +51,12 @@ export function LineChart({
     >
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.22" />
+          <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.32" />
           <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={area} fill={`url(#${gid})`} />
-      <path d={line} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      <path d={line} fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
       {tip && (
         <line x1={tip.p.x} y1={tip.p.y} x2={tip.p.x} y2={h - pad} stroke="var(--border-strong)" strokeWidth="1" strokeDasharray="3 3" />
       )}

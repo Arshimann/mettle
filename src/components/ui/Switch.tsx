@@ -23,7 +23,7 @@ export function Switch({
       }}
       className={cn(
         'relative w-[46px] h-[28px] rounded-full transition-colors shrink-0 flex items-center px-[3px]',
-        checked ? 'bg-accent' : 'bg-border-strong',
+        checked ? 'bg-accent bg-accent-grad' : 'bg-border-strong',
       )}
     >
       <motion.span
