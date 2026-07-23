@@ -56,7 +56,7 @@ export function Segmented<T extends string>({
               <motion.span
                 layoutId={id}
                 transition={spring}
-                className="absolute inset-0 bg-accent rounded-[inherit]"
+                className="absolute inset-0 bg-accent bg-accent-grad rounded-[inherit]"
               />
             )}
             <span className="relative z-10">{o.label}</span>

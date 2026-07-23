@@ -1,4 +1,4 @@
-import type { ThemeId } from '../theme/themes';
+import type { ThemeMode } from '../theme/themes';
 import type { MuscleGroup } from '../data/exercises';
 
 export type Units = 'kg' | 'lbs';
@@ -124,10 +124,11 @@ export interface TabToggles {
   recovery: boolean;
   progress: boolean;
   learn: boolean;
+  friends: boolean;
 }
 
 export interface Settings {
-  theme: ThemeId;
+  theme: ThemeMode;
   units: Units;
   onboarded: boolean;
   preferredRest: number; // seconds

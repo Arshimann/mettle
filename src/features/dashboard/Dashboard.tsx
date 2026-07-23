@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { ChevronRight, Dumbbell, Flame, Moon, Play, Plus } from 'lucide-react';
 import { Button, Card, CardLabel, CountUp } from '../../components/ui';
-import { listContainer, listItem, spring } from '../../theme/motion';
+import { heroContainer, heroItem, listItem, spring } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
 import { computeStreak, sessionVolume } from '../../lib/formulas';
@@ -21,7 +21,7 @@ function greeting(): string {
 function Stat({ value, label }: { value: number; label: string }) {
   return (
     <Card className="p-4 text-center">
-      <CountUp value={value} className="block text-[28px] font-bold tabular leading-none tracking-tight" />
+      <CountUp value={value} className="block text-[30px] font-display font-bold tabular leading-none tracking-tight" />
       <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-fg-subtle mt-1.5">
         {label}
       </div>
@@ -61,25 +61,33 @@ export function Dashboard() {
   const up = nextDay(split, history);
 
   return (
-    <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3.5">
-      <motion.div variants={listItem} className="mb-1">
-        <p className="text-sm text-fg-muted">{greeting()}</p>
-        <h1 className="text-[26px] leading-tight">
+    <motion.div variants={heroContainer} initial="hidden" animate="show" className="space-y-3.5">
+      <motion.div variants={heroItem} className="mb-2">
+        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-fg-muted">{greeting()}</p>
+        <h1 className="display-hero mt-1">
           {prettyDate(today) === 'Today' ? "Today's the day." : prettyDate(today)}
         </h1>
       </motion.div>
 
       {display.streak && streak > 0 && (
-        <motion.div variants={listItem}>
-          <Card className="flex items-center gap-3.5 p-4">
-            <div className="w-11 h-11 rounded-btn bg-accent-soft grid place-items-center text-accent">
-              <Flame size={22} fill="currentColor" strokeWidth={0} />
+        <motion.div variants={heroItem}>
+          <Card className="relative overflow-hidden flex items-center gap-4 p-5">
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'radial-gradient(ellipse 70% 130% at 10% 50%, var(--accent-soft), transparent 60%)' }}
+            />
+            <div
+              className="relative w-12 h-12 rounded-full bg-accent-soft grid place-items-center text-accent shrink-0"
+              style={{ boxShadow: 'var(--accent-glow)' }}
+            >
+              <Flame size={24} fill="currentColor" strokeWidth={0} />
             </div>
-            <div>
-              <div className="text-xl font-bold tabular leading-none">
-                {streak} day{streak === 1 ? '' : 's'}
+            <div className="relative">
+              <div className="stat-xl">
+                {streak}
+                <span className="text-lg font-bold text-fg-muted tracking-normal"> day{streak === 1 ? '' : 's'}</span>
               </div>
-              <div className="text-xs text-fg-muted mt-1">Current streak — keep it alive.</div>
+              <div className="text-xs text-fg-muted mt-1.5">Current streak — keep it alive.</div>
             </div>
           </Card>
         </motion.div>

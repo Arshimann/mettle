@@ -6,4 +6,4 @@ export const APP_DESCRIPTION =
 
 // Storage / persistence
 export const STORAGE_KEY = 'mettle.v1';
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;

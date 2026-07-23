@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
@@ -8,24 +8,36 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#fbfbf9" />
+    <meta name="theme-color" content="#060608" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Mettle" />
     <title>Mettle</title>
-    <!-- Set the theme before paint to avoid a flash of the wrong palette. -->
+    <!-- Set the theme before paint to avoid a flash of the wrong palette.
+         Maps retired v0.x theme ids (editorial/bold) and resolves 'system'. -->
     <script>
       (function () {
+        var resolved = 'dark';
         try {
           var raw = localStorage.getItem('mettle.v1');
-          var theme = 'light';
+          var mode = 'dark';
           if (raw) {
             var parsed = JSON.parse(raw);
-            theme = (parsed && parsed.state && parsed.state.settings && parsed.state.settings.theme) || 'light';
+            mode = (parsed && parsed.state && parsed.state.settings && parsed.state.settings.theme) || 'dark';
           }
-          document.documentElement.dataset.theme = theme;
+          if (mode === 'bold') mode = 'dark';
+          if (mode === 'editorial') mode = 'light';
+          if (mode === 'system') {
+            mode = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+          }
+          if (mode === 'light' || mode === 'dark') resolved = mode;
         } catch (e) {
-          document.documentElement.dataset.theme = 'light';
+          /* fall through to dark */
+        }
+        document.documentElement.dataset.theme = resolved;
+        if (resolved === 'light') {
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', '#f7f7f5');
         }
       })();
     </script>

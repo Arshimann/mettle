@@ -4,18 +4,19 @@ import { ArrowRight, Check, ChevronLeft } from 'lucide-react';
 import { APP_NAME, APP_TAGLINE } from '../../config';
 import { Button, Segmented } from '../../components/ui';
 import { cn } from '../../lib/cn';
-import { easeOut } from '../../theme/motion';
+import { easeOut, heroContainer, heroItem } from '../../theme/motion';
 import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
-import { ThemePicker } from '../settings/ThemePicker';
 import { AuthPanel } from '../auth/AuthPanel';
+import { InstallGuide } from '../system/InstallGuide';
+import { isStandalone } from '../../lib/platform';
 import { StyleQuiz } from './StyleQuiz';
 import { STYLE_DEFS } from '../../data/trainingStyles';
 import { TEMPLATES, TEMPLATE_CATEGORIES } from '../../data/templates';
 import type { Sex } from '../../types';
 
-const STEPS = ['welcome', 'quiz', 'theme', 'units', 'profile', 'template'] as const;
+const STEPS = ['welcome', 'install', 'quiz', 'units', 'profile', 'template'] as const;
 
 const inputCls =
   'w-full h-12 px-3.5 rounded-btn bg-surface-2 border border-border text-[15px] outline-none focus:border-border-strong';
@@ -36,8 +37,11 @@ export function Onboarding() {
   const [sex, setSex] = useState<Sex>(null);
 
   const go = (next: number) => {
-    setDir(next > step ? 1 : -1);
-    setStep(next);
+    let target = next;
+    // Nothing to teach if we're already running from the home screen.
+    if (STEPS[target] === 'install' && isStandalone()) target += next > step ? 1 : -1;
+    setDir(target > step ? 1 : -1);
+    setStep(target);
     haptics.tap();
   };
 
@@ -84,17 +88,23 @@ export function Onboarding() {
               transition={{ duration: 0.3, ease: easeOut }}
             >
               {key === 'welcome' && (
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-[18px] bg-accent text-accent-fg grid place-items-center font-brand font-normal text-[44px] mx-auto mb-6 shadow-pop pt-1">
+                <motion.div className="text-center" variants={heroContainer} initial="hidden" animate="show">
+                  <motion.div
+                    variants={heroItem}
+                    className="w-16 h-16 rounded-[18px] bg-accent bg-accent-grad text-accent-fg grid place-items-center font-brand font-black text-[34px] mx-auto mb-6 glow-accent"
+                    style={{ fontStretch: '125%' }}
+                  >
                     {APP_NAME[0]}
-                  </div>
-                  <h1 className="font-brand font-normal text-5xl tracking-normal mb-3">{APP_NAME}</h1>
-                  <p className="text-lg text-fg-muted leading-snug max-w-[20rem] mx-auto">
+                  </motion.div>
+                  <motion.h1 variants={heroItem} className="wordmark display-hero mb-3">
+                    {APP_NAME}
+                  </motion.h1>
+                  <motion.p variants={heroItem} className="text-lg text-fg-muted leading-snug max-w-[20rem] mx-auto">
                     {APP_TAGLINE} Build your split, log every set, and watch the numbers climb.
-                  </p>
+                  </motion.p>
 
                   {configured && (
-                    <div className="mt-8 text-left">
+                    <motion.div variants={heroItem} className="mt-8 text-left">
                       <AuthPanel onSuccess={() => go(1)} />
                       <button
                         onClick={() => go(1)}
@@ -105,8 +115,18 @@ export function Onboarding() {
                       <p className="text-[12px] text-fg-subtle text-center mt-0.5 leading-snug">
                         An account backs up and syncs your data. Without one, everything stays on this device.
                       </p>
-                    </div>
+                    </motion.div>
                   )}
+                </motion.div>
+              )}
+
+              {key === 'install' && (
+                <div>
+                  <h1 className="text-2xl mb-1.5">Put it on your home screen</h1>
+                  <p className="text-fg-muted mb-6">
+                    Mettle installs straight from the browser — no app store. Takes ten seconds.
+                  </p>
+                  <InstallGuide />
                 </div>
               )}
 
@@ -121,14 +141,6 @@ export function Onboarding() {
                     }}
                     onBack={() => go(step - 1)}
                   />
-                </div>
-              )}
-
-              {key === 'theme' && (
-                <div>
-                  <h1 className="text-3xl mb-1.5">Pick your look</h1>
-                  <p className="text-fg-muted mb-6">Change it anytime in settings.</p>
-                  <ThemePicker />
                 </div>
               )}
 

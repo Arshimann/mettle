@@ -30,16 +30,16 @@ export function Sheet({
       {open && [
         <motion.div
           key="backdrop"
-          className="fixed inset-0 z-[60] bg-black/55"
+          className="fixed inset-0 z-[60] bg-black/65 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.3 }}
           onClick={onClose}
         />,
         <motion.div
           key="panel"
-          className="fixed bottom-0 inset-x-0 z-[60] max-w-[640px] mx-auto bg-elevated border-t border-border rounded-t-[26px] max-h-[88vh] flex flex-col shadow-pop"
+          className="fixed bottom-0 inset-x-0 z-[60] max-w-[640px] mx-auto bg-elevated/95 backdrop-blur-xl border-t border-border rounded-t-[28px] max-h-[88vh] flex flex-col shadow-pop"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           initial={{ y: '100%' }}
           animate={{ y: 0 }}

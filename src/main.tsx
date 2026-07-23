@@ -1,7 +1,10 @@
+// First import: arms the beforeinstallprompt capture before the browser fires it.
+import './lib/installPrompt';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/inter/index.css';
-import '@fontsource/metal-mania/index.css';
+// wdth build = weight 100–900 + width 62–125% axes (the expanded display voice).
+import '@fontsource-variable/archivo/wdth.css';
 import './index.css';
 import App from './App.tsx';
 import { useStore } from './store/useStore';

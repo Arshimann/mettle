@@ -7,8 +7,10 @@ import {
   PersonStanding,
   TrendingUp,
   User,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
+import { isSupabaseConfigured } from '../lib/supabase';
 import type { ScreenId } from '../store/useUI';
 import type { TabToggles } from '../types';
 
@@ -26,6 +28,7 @@ export const NAV: NavItem[] = [
   { id: 'recovery', label: 'Recovery', icon: HeartPulse },
   { id: 'stretch', label: 'Stretch', icon: PersonStanding },
   { id: 'progress', label: 'Progress', icon: TrendingUp },
+  { id: 'friends', label: 'Friends', icon: Users },
   { id: 'you', label: 'You', icon: User },
 ];
 
@@ -36,10 +39,13 @@ const OPTIONAL: Partial<Record<NavItem['id'], keyof TabToggles>> = {
   recovery: 'recovery',
   progress: 'progress',
   learn: 'learn',
+  friends: 'friends',
 };
 
 export function visibleNav(tabs: TabToggles): NavItem[] {
   return NAV.filter((n) => {
+    // Friends needs a cloud to talk to — local-first builds never show it.
+    if (n.id === 'friends' && !isSupabaseConfigured) return false;
     const key = OPTIONAL[n.id];
     return key ? tabs[key] : true;
   });

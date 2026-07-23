@@ -7,8 +7,8 @@ type Variant = 'accent' | 'surface' | 'outline' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 const variantClass: Record<Variant, string> = {
-  accent: 'bg-accent text-accent-fg shadow-card',
-  surface: 'bg-surface-2 text-fg border border-border',
+  accent: 'bg-accent bg-accent-grad text-accent-fg glow-accent',
+  surface: 'bg-surface-2 text-fg border border-border shadow-card',
   outline: 'bg-transparent text-fg border border-border-strong',
   ghost: 'bg-transparent text-fg-muted',
   danger: 'bg-transparent text-danger border border-border',

@@ -20,6 +20,7 @@ import { Stretch } from '../features/stretch/Stretch';
 import { Recovery } from '../features/recovery/Recovery';
 import { Progress } from '../features/progress/Progress';
 import { Learn } from '../features/learn/Learn';
+import { Friends } from '../features/friends/Friends';
 import { You } from '../features/you/You';
 import { Settings } from '../features/settings/Settings';
 import { useStore } from '../store/useStore';
@@ -40,6 +41,8 @@ function renderScreen(screen: ScreenId) {
       return <Progress />;
     case 'learn':
       return <Learn />;
+    case 'friends':
+      return <Friends />;
     case 'you':
       return <You />;
     case 'settings':
@@ -81,12 +84,13 @@ function Header() {
             }}
             className="flex items-center gap-2"
           >
-            <span className="w-8 h-8 rounded-[9px] bg-accent text-accent-fg grid place-items-center font-brand font-normal text-[20px] pt-0.5">
+            <span
+              className="w-8 h-8 rounded-[10px] bg-accent bg-accent-grad text-accent-fg grid place-items-center glow-accent font-brand font-black text-[16px]"
+              style={{ fontStretch: '125%' }}
+            >
               {APP_NAME[0]}
             </span>
-            <span className="font-brand font-normal text-[22px] tracking-normal leading-none pt-0.5">
-              {APP_NAME}
-            </span>
+            <span className="wordmark text-[16px] leading-none pt-px">{APP_NAME}</span>
           </button>
         )}
 
@@ -195,7 +199,7 @@ export function AppShell() {
     // <main>) count as swipe zones.
     <div className={cn('min-h-svh')} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <Header />
-      <main className="max-w-[640px] mx-auto px-[18px] pt-3 pb-[92px]">
+      <main className="max-w-[640px] mx-auto px-[18px] pt-3 pb-[112px]">
         <Screen key={screen} dir={dir}>
           {renderScreen(screen)}
         </Screen>

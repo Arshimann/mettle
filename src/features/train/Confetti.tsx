@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion';
 
-const COLORS = ['var(--accent)', '#ff5a5f', '#2dd4a7', '#f5b545', '#7c6cff'];
+// Accent-gradient family first, with two warm sparks for contrast.
+const COLORS = ['#7c5cff', '#4f8bff', 'var(--accent)', '#2dd4a7', '#f5b545'];
 
 interface Piece {
   id: string;
