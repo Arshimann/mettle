@@ -30,7 +30,6 @@ function Row({ label, desc, control }: { label: string; desc?: string; control: 
 const TAB_LABELS: Record<keyof TabToggles, string> = {
   split: 'Split',
   stretch: 'Stretch',
-  recovery: 'Recovery',
   progress: 'Progress',
   learn: 'Learn',
   friends: 'Friends',
@@ -44,6 +43,9 @@ const DISPLAY_LABELS: Record<keyof DisplayToggles, string> = {
   weeklyRecap: 'Weekly recap',
   upNext: 'Up next',
   didYouKnow: 'Did you know',
+  todaysLesson: "Today's lesson",
+  dailyWatch: "Today's watch",
+  friendActivity: 'Friend activity',
 };
 
 function download(filename: string, text: string) {

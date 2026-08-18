@@ -1,10 +1,11 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { Camera, Check, Copy, Loader2 } from 'lucide-react';
+import { Camera, Check, Copy, Loader2, Lock } from 'lucide-react';
 import { Button, Card, CardLabel, Switch } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { useAuth } from '../../store/useAuth';
 import { useSocial } from '../../store/useSocial';
 import { Avatar } from '../friends/Avatar';
+import { makeAllPrivate } from '../../lib/physique';
 
 function Row({ label, desc, control }: { label: string; desc?: string; control: ReactNode }) {
   return (
@@ -32,6 +33,8 @@ export function SocialSection() {
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmPrivate, setConfirmPrivate] = useState(false);
+  const [privating, setPrivating] = useState(false);
 
   if (status !== 'signed-in' || !myShared) {
     return (
@@ -178,6 +181,43 @@ export function SocialSection() {
             />
           }
         />
+      </Card>
+
+      {/* Physique visibility is per post by design, so a global switch would
+          fight it. What's useful instead is one button to pull everything back. */}
+      <Card>
+        <CardLabel>Physique check-ins</CardLabel>
+        <p className="text-sm text-fg-muted leading-relaxed mb-3">
+          Each photo is private unless you shared it. This pulls every one of them back to private at once.
+        </p>
+        <Button
+          variant={confirmPrivate ? 'danger' : 'outline'}
+          fullWidth
+          disabled={privating}
+          onClick={async () => {
+            if (!confirmPrivate) {
+              setConfirmPrivate(true);
+              setTimeout(() => setConfirmPrivate(false), 3000);
+              return;
+            }
+            setPrivating(true);
+            const res = await makeAllPrivate(myShared.userId);
+            setPrivating(false);
+            setConfirmPrivate(false);
+            haptics.success();
+            setError(res.ok ? null : (res.message ?? 'Could not update'));
+          }}
+        >
+          {privating ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : confirmPrivate ? (
+            'Tap again to make them all private'
+          ) : (
+            <>
+              <Lock size={15} /> Make every photo private
+            </>
+          )}
+        </Button>
       </Card>
     </>
   );

@@ -1,21 +1,32 @@
 import { motion } from 'framer-motion';
-import { ChevronRight, Dumbbell, Flame, Moon, Play, Plus } from 'lucide-react';
+import { ChevronRight, Dumbbell, Flame, Moon, Play, Plus, Snowflake } from 'lucide-react';
 import { Button, Card, CardLabel, CountUp } from '../../components/ui';
 import { heroContainer, heroItem, listItem, spring } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
-import { computeStreak, sessionVolume } from '../../lib/formulas';
+import { FREEZES_PER_WEEK, sessionVolume, streakInfo } from '../../lib/formulas';
 import { nextDay } from '../../lib/training';
-import { prettyDate, todayStr, daysBetween } from '../../lib/date';
+import { prettyDate, todayStr, daysTrainedInWeek, startOfWeek } from '../../lib/date';
 import { unitLabel } from '../../lib/units';
 import { DidYouKnow } from './DidYouKnow';
+import { TodaysLesson } from './TodaysLesson';
+import { DailyWatch } from './DailyWatch';
+import { FriendActivity } from './FriendActivity';
 
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 5) return 'Late night';
-  if (h < 12) return 'Good morning';
-  if (h < 18) return 'Good afternoon';
-  return 'Good evening';
+/**
+ * Time-of-day greeting, with the weekday folded in occasionally so it doesn't
+ * read identically every single morning. Uses your name when you've set one.
+ */
+function greeting(name?: string): string {
+  const now = new Date();
+  const h = now.getHours();
+  const base =
+    h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  // On a third of days, greet the day itself — "Good Monday" reads warmer.
+  const weekday = now.toLocaleDateString(undefined, { weekday: 'long' });
+  const useWeekday = h >= 5 && h < 18 && now.getDate() % 3 === 0;
+  const phrase = useWeekday ? `Good ${weekday}` : base;
+  return name ? `${phrase}, ${name}` : phrase;
 }
 
 function Stat({ value, label }: { value: number; label: string }) {
@@ -35,27 +46,25 @@ export function Dashboard() {
   const prs = useStore((s) => s.prs);
   const units = useStore((s) => s.settings.units);
   const display = useStore((s) => s.settings.display);
+  const profileName = useStore((s) => s.profile.name);
   const stretchEnabled = useStore((s) => s.settings.tabs.stretch);
   const startSession = useStore((s) => s.startSession);
   const navigate = useUI((s) => s.navigate);
 
   const today = todayStr();
-  const thisWeek = history.filter((h) => {
-    const d = daysBetween(h.date, today);
-    return d >= 0 && d < 7;
-  }).length;
-  const streak = computeStreak(history);
+  // Distinct days this Mon–Sun week — the same measure a frequency goal uses,
+  // so the "this week" stat and the goal bar can never disagree.
+  const thisWeek = daysTrainedInWeek(history.map((h) => h.date), today);
+  const { days: streak, freezesLeft, atRisk } = streakInfo(history);
   const last = history[0];
+  // The whole weekly recap reads from one week definition, so its three numbers
+  // always describe the same stretch of days.
+  const weekStart = startOfWeek(today);
+  const inThisWeek = (iso: string) => iso >= weekStart && iso <= today;
   const weekVolume = history
-    .filter((h) => {
-      const d = daysBetween(h.date, today);
-      return d >= 0 && d < 7;
-    })
+    .filter((h) => inThisWeek(h.date))
     .reduce((v, h) => v + sessionVolume(h.exercises), 0);
-  const weekPRs = prs.filter((p) => {
-    const d = daysBetween(p.date, today);
-    return d >= 0 && d < 7;
-  }).length;
+  const weekPRs = prs.filter((p) => inThisWeek(p.date)).length;
 
   const trainedToday = last?.date === today;
   const up = nextDay(split, history);
@@ -63,7 +72,9 @@ export function Dashboard() {
   return (
     <motion.div variants={heroContainer} initial="hidden" animate="show" className="space-y-3.5">
       <motion.div variants={heroItem} className="mb-2">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-fg-muted">{greeting()}</p>
+        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-fg-muted">
+          {greeting(profileName?.trim() || undefined)}
+        </p>
         <h1 className="display-hero mt-1">
           {prettyDate(today) === 'Today' ? "Today's the day." : prettyDate(today)}
         </h1>
@@ -82,13 +93,36 @@ export function Dashboard() {
             >
               <Flame size={24} fill="currentColor" strokeWidth={0} />
             </div>
-            <div className="relative">
+            <div className="relative min-w-0">
               <div className="stat-xl">
                 {streak}
                 <span className="text-lg font-bold text-fg-muted tracking-normal"> day{streak === 1 ? '' : 's'}</span>
               </div>
-              <div className="text-xs text-fg-muted mt-1.5">Current streak — keep it alive.</div>
+              <div className="text-xs text-fg-muted mt-1.5">
+                {atRisk
+                  ? 'No rest days left this week — train today to keep it.'
+                  : freezesLeft > 0
+                    ? `Current streak · ${freezesLeft} rest day${freezesLeft === 1 ? '' : 's'} left this week.`
+                    : 'Current streak — keep it alive.'}
+              </div>
             </div>
+            {/* Rest days act as freezes: two a week, spent automatically. */}
+            {freezesLeft > 0 && (
+              <div className="relative ml-auto flex flex-col items-center gap-1 shrink-0">
+                <div className="flex gap-1">
+                  {Array.from({ length: FREEZES_PER_WEEK }, (_, i) => (
+                    <Snowflake
+                      key={i}
+                      size={15}
+                      className={i < freezesLeft ? 'text-accent' : 'text-fg-subtle/35'}
+                      fill={i < freezesLeft ? 'currentColor' : 'none'}
+                      strokeWidth={i < freezesLeft ? 0 : 2}
+                    />
+                  ))}
+                </div>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-fg-subtle">rest</span>
+              </div>
+            )}
           </Card>
         </motion.div>
       )}
@@ -170,7 +204,7 @@ export function Dashboard() {
         </motion.div>
       )}
 
-      {split.length === 0 ? (
+      {!display.dayCards ? null : split.length === 0 ? (
         <motion.div variants={listItem}>
           <Card className="overflow-hidden">
             <CardLabel>Get started</CardLabel>
@@ -236,6 +270,24 @@ export function Dashboard() {
               {Math.round(sessionVolume(last.exercises)).toLocaleString()} {unitLabel(units)} volume
             </p>
           </Card>
+        </motion.div>
+      )}
+
+      {display.friendActivity && (
+        <motion.div variants={listItem}>
+          <FriendActivity />
+        </motion.div>
+      )}
+
+      {display.todaysLesson && (
+        <motion.div variants={listItem}>
+          <TodaysLesson />
+        </motion.div>
+      )}
+
+      {display.dailyWatch && (
+        <motion.div variants={listItem}>
+          <DailyWatch />
         </motion.div>
       )}
 

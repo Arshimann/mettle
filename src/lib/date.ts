@@ -25,6 +25,25 @@ export function daysBetween(aISO: string, bISO: string): number {
   return Math.round((fromISO(bISO).getTime() - fromISO(aISO).getTime()) / 86400000);
 }
 
+/** Monday of the week containing `iso`. Weeks run Mon–Sun throughout the app. */
+export function startOfWeek(iso: string): string {
+  const d = fromISO(iso);
+  // getDay() is 0=Sun…6=Sat; shift so Monday is 0.
+  return toISO(addDays(d, -((d.getDay() + 6) % 7)));
+}
+
+/** Whole Mon–Sun weeks from a's week to b's week (negative if b is earlier). */
+export function weeksBetween(aISO: string, bISO: string): number {
+  return Math.round(daysBetween(startOfWeek(aISO), startOfWeek(bISO)) / 7);
+}
+
+/** Distinct calendar days trained inside the Mon–Sun week containing `iso`. */
+export function daysTrainedInWeek(dates: string[], iso: string = todayStr()): number {
+  const monday = startOfWeek(iso);
+  const sunday = toISO(addDays(fromISO(monday), 6));
+  return new Set(dates.filter((d) => d >= monday && d <= sunday)).size;
+}
+
 export function prettyDate(iso: string): string {
   const d = fromISO(iso);
   const today = todayStr();

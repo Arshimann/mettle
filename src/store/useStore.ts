@@ -5,23 +5,26 @@ import { appStorage } from '../lib/storage';
 import { uid } from '../lib/id';
 import { todayStr } from '../lib/date';
 import { parseNum, toKg, toKm } from '../lib/units';
-import { DEFAULT_THEME, normalizeTheme, type ThemeMode } from '../theme/themes';
+import { DEFAULT_SYSTEM_PAIR, DEFAULT_THEME, normalizeTheme, normalizeSystemPair, type ThemeMode } from '../theme/themes';
 import { STYLE_DEFS } from '../data/trainingStyles';
 import type { CustomRoutine, CustomStretch } from '../data/stretches';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import type {
   ActiveSession,
+  ApplyMode,
   BodyWeightEntry,
   CustomExercise,
   DisplayToggles,
   Goal,
   HistoryEntry,
+  PlaybookProgress,
   PR,
   Profile,
   SavedSplit,
   Settings,
   SplitDay,
   SplitExercise,
+  StallReason,
   Supplement,
   TabToggles,
   TrainingStyle,
@@ -39,6 +42,7 @@ interface AppData {
   supplements: Supplement[];
   supplementsTaken: { date: string | null; ids: string[] };
   achievements: { id: string; unlockedAt: string }[];
+  playbook: PlaybookProgress;
   customStretches: CustomStretch[];
   customRoutines: CustomRoutine[];
   customExercises: CustomExercise[];
@@ -66,11 +70,12 @@ interface AppActions {
   updateDay: (id: string, patch: Partial<Omit<SplitDay, 'id'>>) => void;
   removeDay: (id: string) => void;
   setDays: (days: SplitDay[]) => void;
-  applyTemplate: (days: { name: string; exercises: SplitExercise[] }[]) => void;
+  /** 'replace' swaps your whole split; 'append' keeps it and adds these days. */
+  applyTemplate: (days: { name: string; exercises: SplitExercise[] }[], mode?: ApplyMode) => void;
   // saved splits
   saveCurrentSplit: (name: string) => void;
   deleteSavedSplit: (id: string) => void;
-  applySavedSplit: (id: string) => void;
+  applySavedSplit: (id: string, mode?: ApplyMode) => void;
   // session
   startSession: (day: SplitDay) => void;
   updateSession: (updater: (s: ActiveSession) => ActiveSession) => void;
@@ -85,6 +90,18 @@ interface AppActions {
   // goals
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt'>) => void;
   removeGoal: (id: string) => void;
+  /** Latch a goal as reached. No-op once already complete. */
+  completeGoal: (id: string) => void;
+
+  /** Persist any newly-earned achievements; returns the ids unlocked just now. */
+  unlockAchievements: (earnedIds: string[]) => string[];
+
+  /** Attach why each stalled lift stalled to a saved workout. */
+  setStallReasons: (entryId: string, reasons: Record<string, StallReason>) => void;
+  // playbook
+  markArticleRead: (id: string) => void;
+  skipAheadSection: (sectionId: string, level: number) => void;
+  setLastOpenedArticle: (id: string | null) => void;
   // supplements
   addSupplement: (s: Omit<Supplement, 'id'>) => void;
   removeSupplement: (id: string) => void;
@@ -112,6 +129,10 @@ const cap = (n: number, max = 9999) => Math.min(Math.max(0, n), max);
 const initialData: AppData = {
   settings: {
     theme: DEFAULT_THEME,
+    systemPair: DEFAULT_SYSTEM_PAIR,
+    accent: null,
+    displayFont: 'default',
+    displayFontScope: 'wordmark',
     units: 'kg',
     onboarded: false,
     preferredRest: 120,
@@ -123,7 +144,7 @@ const initialData: AppData = {
     soundFx: true,
     trainingStyle: null,
     lastSeenVersion: '',
-    tabs: { split: true, stretch: true, recovery: false, progress: true, learn: false, friends: true },
+    tabs: { split: true, stretch: true, progress: true, learn: false, friends: true },
     display: {
       stats: true,
       dayCards: true,
@@ -131,6 +152,9 @@ const initialData: AppData = {
       streak: true,
       weeklyRecap: true,
       didYouKnow: true,
+      todaysLesson: true,
+      dailyWatch: true,
+      friendActivity: true,
       upNext: true,
     },
   },
@@ -144,6 +168,7 @@ const initialData: AppData = {
   supplements: [],
   supplementsTaken: { date: null, ids: [] },
   achievements: [],
+  playbook: { read: {}, unlocked: {}, lastOpened: null },
   customStretches: [],
   customRoutines: [],
   customExercises: [],
@@ -191,8 +216,11 @@ export const useStore = create<Store>()(
         set((s) => ({ split: s.split.map((d) => (d.id === id ? { ...d, ...patch } : d)) })),
       removeDay: (id) => set((s) => ({ split: s.split.filter((d) => d.id !== id) })),
       setDays: (days) => set({ split: days }),
-      applyTemplate: (days) =>
-        set({ split: days.map((d) => ({ id: uid(), name: d.name, exercises: d.exercises })) }),
+      applyTemplate: (days, mode = 'replace') =>
+        set((s) => {
+          const fresh = days.map((d) => ({ id: uid(), name: d.name, exercises: d.exercises }));
+          return { split: mode === 'append' ? [...s.split, ...fresh] : fresh };
+        }),
 
       // ---- saved splits ----
       saveCurrentSplit: (name) =>
@@ -208,11 +236,12 @@ export const useStore = create<Store>()(
           ],
         })),
       deleteSavedSplit: (id) => set((s) => ({ savedSplits: s.savedSplits.filter((x) => x.id !== id) })),
-      applySavedSplit: (id) =>
+      applySavedSplit: (id, mode = 'replace') =>
         set((s) => {
           const found = s.savedSplits.find((x) => x.id === id);
           if (!found) return {};
-          return { split: found.days.map((d) => ({ id: uid(), name: d.name, exercises: d.exercises })) };
+          const fresh = found.days.map((d) => ({ id: uid(), name: d.name, exercises: d.exercises }));
+          return { split: mode === 'append' ? [...s.split, ...fresh] : fresh };
         }),
 
       // ---- session ----
@@ -288,6 +317,9 @@ export const useStore = create<Store>()(
           dayName: sess.dayName,
           exercises,
           durationSec: Math.round((Date.now() - sess.startedAt) / 1000),
+          // Clock time the session began — the date alone can't tell an early
+          // morning session from a late night one.
+          startedAt: sess.startedAt,
           rating: meta?.rating,
           note: meta?.note,
         };
@@ -328,6 +360,45 @@ export const useStore = create<Store>()(
       addGoal: (goal) =>
         set((s) => ({ goals: [...s.goals, { ...goal, id: uid(), createdAt: new Date().toISOString() }] })),
       removeGoal: (id) => set((s) => ({ goals: s.goals.filter((g) => g.id !== id) })),
+      completeGoal: (id) =>
+        set((s) => ({
+          goals: s.goals.map((g) =>
+            g.id === id && !g.completedAt ? { ...g, completedAt: new Date().toISOString() } : g,
+          ),
+        })),
+
+      setStallReasons: (entryId, reasons) =>
+        set((s) => ({
+          history: s.history.map((h) =>
+            h.id === entryId ? { ...h, stallReasons: { ...h.stallReasons, ...reasons } } : h,
+          ),
+        })),
+
+      // ---- playbook ----
+      markArticleRead: (id) =>
+        set((s) =>
+          s.playbook.read[id]
+            ? {}
+            : { playbook: { ...s.playbook, read: { ...s.playbook.read, [id]: new Date().toISOString() } } },
+        ),
+      skipAheadSection: (sectionId, level) =>
+        set((s) => ({
+          playbook: {
+            ...s.playbook,
+            unlocked: { ...s.playbook.unlocked, [sectionId]: Math.max(level, s.playbook.unlocked[sectionId] ?? 1) },
+          },
+        })),
+      setLastOpenedArticle: (id) => set((s) => ({ playbook: { ...s.playbook, lastOpened: id } })),
+
+      // ---- achievements ----
+      unlockAchievements: (earnedIds) => {
+        const known = new Set(get().achievements.map((a) => a.id));
+        const fresh = earnedIds.filter((id) => !known.has(id));
+        if (fresh.length === 0) return [];
+        const unlockedAt = new Date().toISOString();
+        set((s) => ({ achievements: [...s.achievements, ...fresh.map((id) => ({ id, unlockedAt }))] }));
+        return fresh;
+      },
 
       // ---- supplements ----
       addSupplement: (sup) => set((s) => ({ supplements: [...s.supplements, { ...sup, id: uid() }] })),
@@ -378,6 +449,7 @@ export const useStore = create<Store>()(
           supplements: s.supplements,
           supplementsTaken: s.supplementsTaken,
           achievements: s.achievements,
+        playbook: s.playbook,
           customStretches: s.customStretches,
           customRoutines: s.customRoutines,
           customExercises: s.customExercises,
@@ -413,6 +485,7 @@ export const useStore = create<Store>()(
           supplements: [],
           supplementsTaken: { date: null, ids: [] },
           achievements: [],
+          playbook: { read: {}, unlocked: {}, lastOpened: null },
           customStretches: [],
           customRoutines: [],
           customExercises: [],
@@ -429,9 +502,16 @@ export const useStore = create<Store>()(
       // v1 → v2: the four-theme system collapsed into one signature look with
       // dark/light modes. Old picks map to the nearest scene.
       migrate: (persisted, version) => {
-        if (version < 2) {
-          const p = persisted as Partial<AppData> | undefined;
-          if (p?.settings) p.settings.theme = normalizeTheme(p.settings.theme);
+        const p = persisted as (Partial<AppData> & { settings?: Partial<Settings> & { tabs?: Record<string, boolean> } }) | undefined;
+        if (version < 2 && p?.settings) {
+          p.settings.theme = normalizeTheme(p.settings.theme);
+        }
+        if (version < 3 && p?.settings?.tabs) {
+          // Recovery merged into Stretch. Anyone who had Recovery on must keep
+          // reaching that content, so Stretch is switched on for them.
+          const tabs = p.settings.tabs;
+          if (tabs.recovery) tabs.stretch = true;
+          delete tabs.recovery;
         }
         return persisted as AppData;
       },
@@ -451,9 +531,18 @@ export const useStore = create<Store>()(
             ...current.settings,
             ...ps,
             tabs: { ...current.settings.tabs, ...(ps.tabs ?? {}) },
+            systemPair: normalizeSystemPair(ps.systemPair),
             display: { ...current.settings.display, ...(ps.display ?? {}) },
           },
           profile,
+          // Nested objects need the same explicit spread tabs/display get, or a
+          // persisted blob would replace the default wholesale.
+          playbook: {
+            ...current.playbook,
+            ...(p.playbook ?? {}),
+            read: { ...(p.playbook?.read ?? {}) },
+            unlocked: { ...(p.playbook?.unlocked ?? {}) },
+          },
         };
       },
       partialize: (s) => ({
@@ -468,6 +557,7 @@ export const useStore = create<Store>()(
         supplements: s.supplements,
         supplementsTaken: s.supplementsTaken,
         achievements: s.achievements,
+        playbook: s.playbook,
         customStretches: s.customStretches,
         customRoutines: s.customRoutines,
         customExercises: s.customExercises,

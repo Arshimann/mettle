@@ -89,10 +89,11 @@ function fx(name: string, play: () => void, gapMs = 140) {
   }
 }
 
-/** Soft UI blip — settings cog, segmented switches. */
-export const sfxTick = () => fx('tick', () => note(1250, 0, 0.05, 0.05, 'triangle'));
+// Navigation chrome (the settings cog, menu rows, segmented switches) is
+// deliberately silent — a blip on every incidental tap got repetitive fast.
+// Sound is reserved for the moments below, which mean something.
 
-/** Satisfying check-off pop — supplements. */
+/** Satisfying check-off pop — supplements, reactions. */
 export const sfxPop = () =>
   fx('pop', () => {
     const c = getCtx();

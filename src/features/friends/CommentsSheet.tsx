@@ -3,43 +3,61 @@ import { Loader2, Send, Trash2 } from 'lucide-react';
 import { Sheet } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { prettyDate } from '../../lib/date';
-import { addComment, deleteComment, fetchComments } from '../../lib/social';
-import type { WorkoutComment } from '../../types/social';
+import type { SocialResult } from '../../lib/social';
 import { Avatar } from './Avatar';
 
-/** Comment thread on one published workout. */
+interface CommentRow {
+  id: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+}
+
+/** The thread's data source, injected so one sheet serves workouts and
+ *  physique posts without either knowing about the other. */
+export interface CommentApi {
+  list: () => Promise<SocialResult<CommentRow[]>>;
+  add: (authorId: string, body: string) => Promise<SocialResult>;
+  remove: (id: string) => Promise<SocialResult>;
+}
+
 export function CommentsSheet({
   open,
   onClose,
-  ownerId,
-  workoutKey,
   myId,
   names,
+  api,
+  title = 'Comments',
+  canModerate = false,
 }: {
   open: boolean;
   onClose: () => void;
-  ownerId: string;
-  workoutKey: string;
   myId: string;
-  /** userId → display name (friends + me + the profile owner) */
+  /** userId → display name (friends + me + the owner) */
   names: Map<string, { displayName: string; avatarUrl: string | null }>;
+  api: CommentApi;
+  title?: string;
+  /** Post owners can remove other people's comments on their own content. */
+  canModerate?: boolean;
 }) {
-  // Mounted fresh per workout (parent keys it), so state resets on unmount.
-  const [comments, setComments] = useState<WorkoutComment[]>([]);
+  const [comments, setComments] = useState<CommentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await fetchComments(ownerId, workoutKey);
+    const res = await api.list();
     if (res.ok && res.data) setComments(res.data);
     setLoading(false);
-  }, [ownerId, workoutKey]);
+    // api is rebuilt per render by callers; the sheet is keyed per subject so
+    // remounting is the reset, and listing once on mount is correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let stale = false;
     void (async () => {
-      const res = await fetchComments(ownerId, workoutKey);
+      const res = await api.list();
       if (stale) return;
       if (res.ok && res.data) setComments(res.data);
       setLoading(false);
@@ -47,13 +65,14 @@ export function CommentsSheet({
     return () => {
       stale = true;
     };
-  }, [ownerId, workoutKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const submit = async () => {
     const text = draft.trim();
     if (!text || busy) return;
     setBusy(true);
-    const res = await addComment(ownerId, workoutKey, myId, text);
+    const res = await api.add(myId, text);
     setBusy(false);
     if (res.ok) {
       haptics.success();
@@ -63,7 +82,7 @@ export function CommentsSheet({
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="Comments">
+    <Sheet open={open} onClose={onClose} title={title}>
       {loading ? (
         <div className="flex justify-center py-8 text-fg-muted">
           <Loader2 size={20} className="animate-spin" />
@@ -75,21 +94,24 @@ export function CommentsSheet({
           {comments.map((c) => {
             const who = names.get(c.authorId);
             const name = who?.displayName ?? 'Lifter';
+            const canDelete = c.authorId === myId || canModerate;
             return (
               <div key={c.id} className="flex items-start gap-2.5">
                 <Avatar name={name} url={who?.avatarUrl ?? null} size={30} />
                 <div className="min-w-0 flex-1 rounded-card bg-surface-2 border border-border px-3 py-2.5">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-[12px] font-bold truncate">{name}</span>
-                    <span className="text-[10px] text-fg-subtle shrink-0">{prettyDate(c.createdAt.slice(0, 10))}</span>
+                    <span className="text-[10px] text-fg-subtle shrink-0">
+                      {prettyDate(c.createdAt.slice(0, 10))}
+                    </span>
                   </div>
                   <p className="text-[14px] leading-snug mt-0.5 break-words">{c.body}</p>
                 </div>
-                {c.authorId === myId && (
+                {canDelete && (
                   <button
                     onClick={() => {
                       haptics.tap();
-                      void deleteComment(c.id).then(load);
+                      void api.remove(c.id).then(load);
                     }}
                     aria-label="Delete comment"
                     className="w-7 h-7 grid place-items-center text-fg-subtle shrink-0 mt-1"

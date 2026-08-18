@@ -1,4 +1,5 @@
-import type { ThemeMode } from '../theme/themes';
+import type { SystemPair, ThemeMode } from '../theme/themes';
+import type { DisplayFont, FontScope } from '../theme/displayFont';
 import type { MuscleGroup } from '../data/exercises';
 
 export type Units = 'kg' | 'lbs';
@@ -32,7 +33,27 @@ export interface HistoryEntry {
   rating?: number; // 1–5
   note?: string;
   durationSec?: number;
+  /** Epoch ms the session started. Absent on entries logged before v1.1. */
+  startedAt?: number;
+  /** Why a stalled lift stalled, answered right after saving. Keyed by
+   *  exercise name; feeds the coaching read rather than guessing. */
+  stallReasons?: Record<string, StallReason>;
 }
+
+/** A plateau is either planned backing-off or accumulated fatigue. */
+export type StallReason = 'deload' | 'fatigue' | 'pushing';
+
+/** Playbook reading progress. Small enough to live in the main store. */
+export interface PlaybookProgress {
+  /** articleId → ISO date first completed. */
+  read: Record<string, string>;
+  /** sectionId → highest level unlocked by skipping ahead. */
+  unlocked: Record<string, number>;
+  lastOpened: string | null;
+}
+
+/** How a template or saved preset lands: swap the split, or add to it. */
+export type ApplyMode = 'replace' | 'append';
 
 export interface SplitExercise {
   name: string;
@@ -80,6 +101,10 @@ export interface Goal {
   createdAt: string;
   deadline?: string;
   baseValue?: number;
+  /** Set once, the first time the goal is reached — a goal you hit stays hit
+   *  even if the underlying number later drops (a weekly count rolls over,
+   *  body weight drifts back). */
+  completedAt?: string;
 }
 
 export interface Supplement {
@@ -101,6 +126,9 @@ export interface Achievement {
 }
 
 export interface Profile {
+  /** Optional first name, used only for the greeting. Stays local — the social
+   *  displayName is a separate, published thing. */
+  name?: string;
   height: number | null; // cm
   age: number | null;
   sex: Sex;
@@ -114,14 +142,17 @@ export interface DisplayToggles {
   streak: boolean;
   weeklyRecap: boolean;
   didYouKnow: boolean;
+  todaysLesson: boolean;
+  dailyWatch: boolean;
+  friendActivity: boolean;
   upNext: boolean;
 }
 
 /** Which optional bottom-nav tabs are visible. Home/Train/You are always on. */
 export interface TabToggles {
   split: boolean;
+  /** Stretch also holds Recovery since v1.1. */
   stretch: boolean;
-  recovery: boolean;
   progress: boolean;
   learn: boolean;
   friends: boolean;
@@ -129,6 +160,12 @@ export interface TabToggles {
 
 export interface Settings {
   theme: ThemeMode;
+  /** Which themes 'system' alternates between. */
+  systemPair: SystemPair;
+  /** Overrides the active theme's accent. null = use the theme's own. */
+  accent: string | null;
+  displayFont: DisplayFont;
+  displayFontScope: FontScope;
   units: Units;
   onboarded: boolean;
   preferredRest: number; // seconds

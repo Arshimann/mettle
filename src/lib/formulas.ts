@@ -1,8 +1,5 @@
 import type { Activity, ExerciseEntry, HistoryEntry, Profile, SetEntry } from '../types';
-import { addDays, fromISO, todayStr, toISO } from './date';
-
-/** Allow one rest day inside a streak before it breaks (matches the original "strict" streak). */
-const MAX_REST_GAP = 1;
+import { addDays, daysTrainedInWeek, fromISO, startOfWeek, todayStr, toISO } from './date';
 
 /** Epley 1RM estimate: 1RM ≈ w × (1 + r/30). Good for ~1–10 reps. */
 export function estimate1RM(weightKg: number, reps: number): number {
@@ -94,37 +91,145 @@ export function caloriePlan(tdeeVal: number, weightKg: number, goal: DietGoal, d
   return { calories, delta: actualDelta, weeklyKg, protein };
 }
 
+/** Rest days each Mon–Sun week absorbs before the streak breaks. */
+export const FREEZES_PER_WEEK = 2;
+
+export interface StreakInfo {
+  /** Trained days in the current streak. */
+  days: number;
+  /** Freezes still available in the current week. */
+  freezesLeft: number;
+  /** Out of freezes this week and haven't trained today. */
+  atRisk: boolean;
+}
+
 /**
- * Current training streak: consecutive trained days counting back from the most
- * recent workout, allowing a single rest day between sessions. Gone after 3+ idle days.
+ * Training streak with weekly rest allowance.
+ *
+ * Walking back from the most recent session, a trained day extends the streak
+ * and a rest day spends one of that week's freezes. Weeks run Mon–Sun and each
+ * grants two, so an ordinary 4–5 day routine keeps its streak alive while a
+ * genuine lapse still ends it. The streak counts trained days, not calendar
+ * days — rest days keep it alive without inflating the number.
  */
-export function computeStreak(history: HistoryEntry[]): number {
-  if (history.length === 0) return 0;
+export function streakInfo(history: HistoryEntry[], todayISO: string = todayStr()): StreakInfo {
+  const empty: StreakInfo = { days: 0, freezesLeft: FREEZES_PER_WEEK, atRisk: false };
+  if (history.length === 0) return empty;
+
   const dates = new Set(history.map((h) => h.date));
   const sorted = [...dates].sort();
   const earliest = sorted[0];
   const latest = sorted[sorted.length - 1];
 
-  const today = fromISO(todayStr());
-  const daysSince = Math.floor((today.getTime() - fromISO(latest).getTime()) / 86400000);
-  if (daysSince > 2) return 0;
+  // Freezes spent between the last session and today decide if it survived.
+  const spentByNow = countRestDays(dates, latest, todayISO);
+  const weekOfToday = startOfWeek(todayISO);
+  if (spentByNow > FREEZES_PER_WEEK) return empty;
 
   let cursor = fromISO(latest);
-  let trained = 0;
-  let misses = 0;
-  while (true) {
-    const iso = toISO(cursor);
-    if (dates.has(iso)) {
-      trained++;
-      misses = 0;
-    } else {
-      misses++;
-      if (misses > MAX_REST_GAP) break;
-    }
-    cursor = addDays(cursor, -1);
-    if (toISO(cursor) < earliest) break;
+  let days = 0;
+  // Freezes are per calendar week, so spend them from a per-week purse.
+  const spent = new Map<string, number>();
+  const spend = (iso: string): boolean => {
+    const wk = startOfWeek(iso);
+    const used = (spent.get(wk) ?? 0) + 1;
+    if (used > FREEZES_PER_WEEK) return false;
+    spent.set(wk, used);
+    return true;
+  };
+
+  // Rest days between the last session and today come out of the purse first.
+  for (let d = addDays(fromISO(latest), 1); toISO(d) <= todayISO; d = addDays(d, 1)) {
+    if (!dates.has(toISO(d)) && !spend(toISO(d))) return empty;
   }
-  return trained;
+
+  while (toISO(cursor) >= earliest) {
+    const iso = toISO(cursor);
+    if (dates.has(iso)) days++;
+    else if (!spend(iso)) break;
+    cursor = addDays(cursor, -1);
+  }
+
+  const freezesLeft = Math.max(0, FREEZES_PER_WEEK - (spent.get(weekOfToday) ?? 0));
+  return { days, freezesLeft, atRisk: freezesLeft === 0 && !dates.has(todayISO) };
+}
+
+/** Untrained days strictly between two ISO dates (exclusive of `from`). */
+function countRestDays(dates: Set<string>, fromISODate: string, toISODate: string): number {
+  let n = 0;
+  for (let d = addDays(fromISO(fromISODate), 1); toISO(d) <= toISODate; d = addDays(d, 1)) {
+    if (!dates.has(toISO(d))) n++;
+  }
+  return n;
+}
+
+/** Streak length only — the shape every existing caller already expects. */
+export function computeStreak(history: HistoryEntry[]): number {
+  return streakInfo(history).days;
+}
+
+/**
+ * Lifts whose best estimated 1RM hasn't improved across their last few
+ * sessions. Needs at least `sessions` data points so a second-ever workout
+ * never gets called a plateau.
+ */
+export function stalledExercises(
+  history: HistoryEntry[],
+  opts: { sessions?: number; excludeNames?: Set<string> } = {},
+): string[] {
+  const sessions = opts.sessions ?? 3;
+  const byName = new Map<string, { name: string; e1rms: number[] }>();
+  // history is newest-first; take each lift's most recent `sessions` entries.
+  for (const h of history) {
+    for (const ex of h.exercises) {
+      const key = ex.name.toLowerCase();
+      if (opts.excludeNames?.has(key)) continue;
+      const e1 = bestE1RM(ex.sets);
+      if (e1 <= 0) continue; // cardio and bodyweight-only work can't stall on load
+      const cur = byName.get(key) ?? { name: ex.name, e1rms: [] };
+      if (cur.e1rms.length < sessions) cur.e1rms.push(e1);
+      byName.set(key, cur);
+    }
+  }
+  const out: string[] = [];
+  for (const { name, e1rms } of byName.values()) {
+    if (e1rms.length < sessions) continue;
+    // e1rms[0] is the newest. Stalled = the newest is no better than the best
+    // of the earlier ones.
+    const best = Math.max(...e1rms.slice(1));
+    if (e1rms[0] <= best) out.push(name);
+  }
+  return out;
+}
+
+export interface WeekTower {
+  /** Monday of the week, ISO. */
+  weekStart: string;
+  /** Distinct days trained that week, 0–7. */
+  days: number;
+  /** Short label like "18 Aug". */
+  label: string;
+  isCurrent: boolean;
+}
+
+/**
+ * Days trained per calendar week, oldest → newest. Unlike the heatmap grid,
+ * these buckets are real Mon–Sun weeks, so a column means what it looks like.
+ */
+export function weeklyTowers(history: HistoryEntry[], weeks = 12, todayISO: string = todayStr()): WeekTower[] {
+  const dates = history.map((h) => h.date);
+  const thisWeek = startOfWeek(todayISO);
+  const out: WeekTower[] = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const weekStart = toISO(addDays(fromISO(thisWeek), -i * 7));
+    out.push({
+      weekStart,
+      days: daysTrainedInWeek(dates, weekStart),
+      label: fromISO(weekStart).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+      isCurrent: weekStart === thisWeek,
+    });
+  }
+  return out;
 }
 
 export interface ConsistencyCell {

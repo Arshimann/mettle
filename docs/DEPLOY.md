@@ -68,7 +68,10 @@ up and synced across devices. Email + password sign-in.
    - then paste and run `supabase/migrations/0003_social.sql` (the Friends feature:
      shared profiles, published workouts, requests, reactions/comments + their policies),
    - then paste and run `supabase/migrations/0004_storage.sql` (the public `avatars`
-     bucket for profile pictures, with per-user write access).
+     bucket for profile pictures, with per-user write access),
+   - then paste and run `supabase/migrations/0005_physique.sql` (the physique board:
+     posts, reactions, comments, and a **private** photo bucket served only through
+     short-lived signed URLs).
 3. **Authentication → Sign In / Providers → Email**: make sure **Email** is enabled.
    For a frictionless personal app, turn **Confirm email** *off* — then sign-up logs
    you straight in. (Leave it on if you'd rather verify emails; users then have to

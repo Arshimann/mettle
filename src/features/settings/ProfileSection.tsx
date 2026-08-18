@@ -26,6 +26,7 @@ export function ProfileSection() {
   const addBodyWeight = useStore((s) => s.addBodyWeight);
   const units = useStore((s) => s.settings.units);
 
+  const [name, setName] = useState(profile.name ?? '');
   const [height, setHeight] = useState(profile.height ? String(profile.height) : '');
   const [age, setAge] = useState(profile.age ? String(profile.age) : '');
   const [bw, setBw] = useState('');
@@ -54,6 +55,17 @@ export function ProfileSection() {
     <div className="space-y-3.5">
       <Card className="space-y-3">
         <CardLabel>About you</CardLabel>
+        <input
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setProfile({ name: e.target.value.trim() || undefined });
+          }}
+          placeholder="First name (for your greeting)"
+          maxLength={20}
+          aria-label="First name"
+          className={inputCls}
+        />
         <input inputMode="numeric" value={height} onChange={(e) => commitHeight(e.target.value)} placeholder="Height (cm)" className={inputCls} />
         <input inputMode="numeric" value={age} onChange={(e) => commitAge(e.target.value)} placeholder="Age" className={inputCls} />
         <div>

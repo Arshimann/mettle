@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Calculator, Check, Dumbbell, Plus, Trash2 } from 'lucide-react';
+import { Award, Calculator, Check, Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, PageHeader, Sheet, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
+import { EditDaySheet } from './EditDaySheet';
+import { StallPrompt } from './StallPrompt';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { listContainer, listItem, revealBlur } from '../../theme/motion';
@@ -10,8 +12,8 @@ import { useStore, type EndSessionResult } from '../../store/useStore';
 import { useSocial } from '../../store/useSocial';
 import { useUI } from '../../store/useUI';
 import { lastPerformance, suggestNextKg } from '../../lib/training';
-import { distanceLabel, fmtWeight, fromKg, loadIncrement, unitLabel } from '../../lib/units';
-import { sessionVolume } from '../../lib/formulas';
+import { distanceLabel, fmtWeight, fromKg, loadIncrement, paceLabel, toKm, unitLabel } from '../../lib/units';
+import { sessionVolume, stalledExercises } from '../../lib/formulas';
 import { sfxFanfare, sfxSetDone, sfxSparkle } from '../../lib/sound';
 import { quoteForCount } from '../../data/quotes';
 import { EXERCISE_LIBRARY } from '../../data/exercises';
@@ -130,6 +132,7 @@ export function Train() {
   const autoRest = useStore((s) => s.settings.autoRest);
   const startSession = useStore((s) => s.startSession);
   const cancelSession = useStore((s) => s.cancelSession);
+  const setStallReasons = useStore((s) => s.setStallReasons);
   const endSession = useStore((s) => s.endSession);
   const update = useStore((s) => s.updateSession);
   const navigate = useUI((s) => s.navigate);
@@ -138,7 +141,9 @@ export function Train() {
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [celebration, setCelebration] = useState<EndSessionResult | null>(null);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmEndDiscard, setConfirmEndDiscard] = useState(false);
+  const [editDayId, setEditDayId] = useState<string | null>(null);
+  const [pendingStalls, setPendingStalls] = useState<{ entryId: string; names: string[] } | null>(null);
   const [tools, setTools] = useState<{ ei: number; name: string; target: number } | null>(null);
   const [flashReps, setFlashReps] = useState<{ ei: number; si: number } | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -165,6 +170,21 @@ export function Train() {
         result={celebration}
         onDone={() => {
           setCelebration(null);
+          // The stall question waits until after the party — never interrupts it.
+          if (!pendingStalls?.names.length) navigate('progress');
+        }}
+      />
+    );
+  }
+
+  // ---- "why did this stall?", asked once, after the celebration ----
+  if (pendingStalls && pendingStalls.names.length > 0) {
+    return (
+      <StallPrompt
+        exercises={pendingStalls.names}
+        onDone={(reasons) => {
+          if (Object.keys(reasons).length > 0) setStallReasons(pendingStalls.entryId, reasons);
+          setPendingStalls(null);
           navigate('progress');
         }}
       />
@@ -203,6 +223,17 @@ export function Train() {
                       {day.exercises.length} exercise{day.exercises.length === 1 ? '' : 's'}
                     </div>
                   </div>
+                  {/* Tweak the day right here — no round trip to the Split tab. */}
+                  <button
+                    onClick={() => {
+                      haptics.tap();
+                      setEditDayId(day.id);
+                    }}
+                    className="w-9 h-9 grid place-items-center rounded-btn text-fg-subtle shrink-0"
+                    aria-label={`Edit ${day.name}`}
+                  >
+                    <Pencil size={16} />
+                  </button>
                   <Button size="sm" variant="accent" onClick={() => startSession(day)}>
                     Start
                   </Button>
@@ -211,6 +242,8 @@ export function Train() {
             ))}
           </motion.div>
         )}
+
+        <EditDaySheet day={split.find((d) => d.id === editDayId) ?? null} onClose={() => setEditDayId(null)} />
       </div>
     );
   }
@@ -353,6 +386,14 @@ export function Train() {
     if (result) {
       // Fire-and-forget: friends see the workout without holding up the party.
       useSocial.getState().publishFinishedWorkout(result.entry, result.prHits);
+      // Anything that just set a PR obviously isn't stalled — only ask about
+      // the rest, and only about lifts in the session we just saved.
+      const logged = new Set(result.entry.exercises.map((e) => e.name.toLowerCase()));
+      const prNames = new Set(result.prHits.map((n) => n.toLowerCase()));
+      const stalled = stalledExercises(useStore.getState().history, { excludeNames: prNames })
+        .filter((n) => logged.has(n.toLowerCase()))
+        .slice(0, 3);
+      setPendingStalls({ entryId: result.entry.id, names: stalled });
       setCelebration(result);
     } else navigate('home');
   };
@@ -400,6 +441,22 @@ export function Train() {
                 return null;
               })()
             : null;
+          // Cardio never sets a PR, so give it its own record to chase: the
+          // longest single bout and the best pace you've ever held on it.
+          const cardioBest = isCardio
+            ? history.reduce<{ mins: number; pace: string | null }>(
+                (best, h) => {
+                  const e = h.exercises.find((x) => x.name.toLowerCase() === ex.name.toLowerCase());
+                  if (!e) return best;
+                  for (const st of e.sets) {
+                    const m = st.durationMin ?? 0;
+                    if (m > best.mins) best = { mins: m, pace: paceLabel(m, st.distanceKm ?? 0, units) };
+                  }
+                  return best;
+                },
+                { mins: 0, pace: null },
+              )
+            : null;
           const entered = ex.sets.map((s) => parseFloat(s.weight)).filter((n) => !isNaN(n));
           const toolTarget = entered.length
             ? Math.max(...entered)
@@ -433,8 +490,8 @@ export function Train() {
               <div className="flex items-center gap-2 mb-3 text-[13px]">
                 <span className="text-fg-muted">
                   {isCardio
-                    ? lastCardioMin
-                      ? `Last · ${lastCardioMin} min`
+                    ? cardioBest && cardioBest.mins > 0
+                      ? `Best · ${cardioBest.mins} min${cardioBest.pace ? ` @ ${cardioBest.pace}` : ''}`
                       : 'First time'
                     : lp
                       ? `Last · ${fmtWeight(lp.top.weight, units)}${unitLabel(units)} × ${lp.top.reps}`
@@ -454,6 +511,33 @@ export function Train() {
                   </button>
                 )}
               </div>
+
+              {/* Cardio earns a live readout: pace per set, totals for the bout. */}
+              {isCardio && (() => {
+                const mins = ex.sets.reduce((n, s) => n + (parseFloat(s.duration ?? '') || 0), 0);
+                const dist = ex.sets.reduce((n, s) => n + (parseFloat(s.distance ?? '') || 0), 0);
+                if (mins <= 0 && dist <= 0) return null;
+                const pace = paceLabel(mins, toKm(String(dist), units), units);
+                return (
+                  <div className="flex items-center gap-2 mb-3 -mt-1">
+                    {mins > 0 && (
+                      <span className="px-2.5 h-7 rounded-full bg-surface-2 text-[12px] font-semibold text-fg-muted inline-flex items-center">
+                        {Math.round(mins)} min
+                      </span>
+                    )}
+                    {dist > 0 && (
+                      <span className="px-2.5 h-7 rounded-full bg-surface-2 text-[12px] font-semibold text-fg-muted inline-flex items-center">
+                        {Math.round(dist * 100) / 100} {distanceLabel(units)}
+                      </span>
+                    )}
+                    {pace && (
+                      <span className="px-2.5 h-7 rounded-full bg-accent-soft text-accent text-[12px] font-bold inline-flex items-center tabular">
+                        {pace}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="space-y-2">
                 {ex.sets.map((set, si) => (
@@ -583,23 +667,8 @@ export function Train() {
         Finish workout
       </Button>
 
-      <Button
-        variant="danger"
-        fullWidth
-        className="mt-2.5"
-        onClick={() => {
-          if (!confirmDiscard) {
-            setConfirmDiscard(true);
-            setTimeout(() => setConfirmDiscard(false), 3000);
-            return;
-          }
-          haptics.warn();
-          cancelSession();
-          navigate('home');
-        }}
-      >
-        {confirmDiscard ? 'Tap again to discard' : 'Discard workout'}
-      </Button>
+      {/* Discarding lives inside the "End workout?" sheet — one destructive
+          path, reached the same way as saving. */}
 
       {/* Clearance so the floating rest timer never covers the buttons above. */}
       {session.restEndsAt && <div className="h-28" aria-hidden="true" />}
@@ -627,10 +696,29 @@ export function Train() {
               setFinishOpen(true);
             }}
           >
-            End workout
+            Save &amp; finish
           </Button>
           <Button size="lg" fullWidth onClick={() => setConfirmEnd(false)}>
             Keep training
+          </Button>
+          {/* Second tap required — this throws the session away for good. */}
+          <Button
+            variant="danger"
+            size="lg"
+            fullWidth
+            onClick={() => {
+              if (!confirmEndDiscard) {
+                setConfirmEndDiscard(true);
+                setTimeout(() => setConfirmEndDiscard(false), 3000);
+                return;
+              }
+              haptics.warn();
+              cancelSession();
+              setConfirmEnd(false);
+              navigate('home');
+            }}
+          >
+            {confirmEndDiscard ? 'Tap again — this deletes it' : 'End without saving'}
           </Button>
         </div>
       </Sheet>

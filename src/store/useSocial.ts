@@ -9,6 +9,8 @@ import type {
 } from '../types/social';
 import * as social from '../lib/social';
 import { joinPresence, leavePresence, presenceJoined } from '../lib/presence';
+import { usePhysique } from './usePhysique';
+import { useNotifications, notifyFriendTraining } from './useNotifications';
 
 /**
  * Social state — NOT persisted. Fetched fresh per sign-in so offline devices
@@ -70,6 +72,9 @@ export const useSocial = create<SocialState>((set, get) => ({
     set({ myShared: res.data });
     await get().refresh();
     set({ ready: true, loading: false });
+    // The bell should work app-wide, not only after visiting Friends.
+    useNotifications.getState().init(userId);
+    get().ensurePresence();
     // Fresh snapshot + workout backfill, off the critical path.
     void social.publishSharedProfile(userId, res.data.privacy);
     void social.backfillWorkouts(userId, res.data.privacy);
@@ -92,6 +97,8 @@ export const useSocial = create<SocialState>((set, get) => ({
 
   teardown: () => {
     leavePresence();
+    usePhysique.getState().teardown();
+    useNotifications.getState().teardown();
     set({
       userId: null,
       ready: false,
@@ -108,7 +115,16 @@ export const useSocial = create<SocialState>((set, get) => ({
   ensurePresence: () => {
     const { userId } = get();
     if (!userId || presenceJoined()) return;
-    joinPresence(userId, (roster) => set({ presence: roster }));
+    joinPresence(
+      userId,
+      (roster) => set({ presence: roster }),
+      (diffs) =>
+        diffs.forEach((d) => {
+          // presence:gym is global — only friends are worth telling you about.
+          const f = get().friends.find((x) => x.userId === d.userId);
+          if (f) notifyFriendTraining(f);
+        }),
+    );
   },
 
   republish: () => {

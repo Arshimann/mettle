@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { deleteAllPosts } from './physique';
 import { useStore } from '../store/useStore';
 import { computeStreak } from './formulas';
 import { todayStr, addDays, fromISO, toISO } from './date';
@@ -213,6 +214,8 @@ export async function backfillWorkouts(userId: string, privacy: SharedPrivacy): 
 export async function unpublishAll(userId: string): Promise<SocialResult> {
   if (!supabase) return noClient;
   await supabase.from('workouts').delete().eq('user_id', userId);
+  // Physique photos are the most sensitive thing here — wipe them too.
+  await deleteAllPosts(userId);
   const { error } = await supabase
     .from('shared_profiles')
     .update({ streak: 0, trained_dates: [], prs: [], custom_exercises: [], split: null })
@@ -371,6 +374,44 @@ export async function fetchFriendWorkouts(
     .from('workouts')
     .select('client_id, user_id, date, day_name, exercises, duration_sec, pr_names')
     .eq('user_id', friendId)
+    .order('date', { ascending: false })
+    .limit(limit);
+  if (error) return { ok: false, message: error.message };
+  type Row = {
+    client_id: string;
+    user_id: string;
+    date: string;
+    day_name: string | null;
+    exercises: FriendWorkout['exercises'];
+    duration_sec: number | null;
+    pr_names: string[] | null;
+  };
+  return {
+    ok: true,
+    data: ((data ?? []) as Row[]).map((r) => ({
+      key: r.client_id,
+      userId: r.user_id,
+      date: r.date,
+      dayName: r.day_name ?? 'Workout',
+      exercises: r.exercises ?? [],
+      durationSec: r.duration_sec,
+      prNames: r.pr_names ?? [],
+    })),
+  };
+}
+
+/** One feed across every friend, newest first — the activity view. Fetching
+ *  per-friend would be N round trips for the same rows. */
+export async function fetchFriendsFeed(
+  friendIds: string[],
+  limit = 20,
+): Promise<SocialResult<FriendWorkout[]>> {
+  if (!supabase) return noClient;
+  if (friendIds.length === 0) return { ok: true, data: [] };
+  const { data, error } = await supabase
+    .from('workouts')
+    .select('client_id, user_id, date, day_name, exercises, duration_sec, pr_names')
+    .in('user_id', friendIds)
     .order('date', { ascending: false })
     .limit(limit);
   if (error) return { ok: false, message: error.message };

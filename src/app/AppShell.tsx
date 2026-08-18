@@ -4,12 +4,12 @@ import { ChevronLeft, ChevronRight, Settings as SettingsIcon } from 'lucide-reac
 import { APP_NAME } from '../config';
 import { cn } from '../lib/cn';
 import { haptics } from '../lib/haptics';
-import { sfxTick } from '../lib/sound';
 import { springPop } from '../theme/motion';
 import { useUI, type ScreenId } from '../store/useUI';
 import { SETTINGS_SECTIONS } from '../features/settings/sections';
 import { visibleNav } from './nav';
 import { BottomNav } from './BottomNav';
+import { NotificationBell } from '../features/notifications/NotificationBell';
 import { Screen } from './Screen';
 import { UpdatePrompt } from '../features/system/UpdatePrompt';
 import { WhatsNew } from '../features/system/WhatsNew';
@@ -17,7 +17,6 @@ import { Dashboard } from '../features/dashboard/Dashboard';
 import { Split } from '../features/split/Split';
 import { Train } from '../features/train/Train';
 import { Stretch } from '../features/stretch/Stretch';
-import { Recovery } from '../features/recovery/Recovery';
 import { Progress } from '../features/progress/Progress';
 import { Learn } from '../features/learn/Learn';
 import { Friends } from '../features/friends/Friends';
@@ -35,8 +34,6 @@ function renderScreen(screen: ScreenId) {
       return <Train />;
     case 'stretch':
       return <Stretch />;
-    case 'recovery':
-      return <Recovery />;
     case 'progress':
       return <Progress />;
     case 'learn':
@@ -60,11 +57,14 @@ function Header() {
   const sectionLabel = SETTINGS_SECTIONS.find((s) => s.id === sectionId)?.label ?? 'Settings';
 
   return (
-    <header className="sticky top-0 z-30 backdrop-blur-xl bg-canvas/70 border-b border-border/60">
-      <div
-        className="max-w-[640px] mx-auto h-14 px-[18px] flex items-center justify-between"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-      >
+    // The notch inset pads the header itself, never the fixed-height bar inside
+    // it — with border-box, a 59px Dynamic Island inset would eat the whole 56px
+    // bar and crush its contents.
+    <header
+      className="sticky top-0 z-30 backdrop-blur-xl bg-canvas/70 border-b border-border/60"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
+      <div className="max-w-[640px] mx-auto h-14 px-[18px] flex items-center justify-between">
         {inSettings ? (
           <button
             onClick={() => {
@@ -95,11 +95,12 @@ function Header() {
         )}
 
         {!inSettings && (
-          <div className="relative">
+          <div className="flex items-center gap-0.5">
+            <NotificationBell />
+            <div className="relative">
             <motion.button
               onClick={() => {
                 haptics.tap();
-                sfxTick();
                 setMenuOpen((o) => !o);
               }}
               whileTap={{ rotate: 26, scale: 0.9 }}
@@ -132,7 +133,6 @@ function Header() {
                         key={item.id}
                         onClick={() => {
                           haptics.select();
-                          sfxTick();
                           navigate('settings', { section: item.id });
                           setMenuOpen(false);
                         }}
@@ -147,6 +147,7 @@ function Header() {
                 </motion.div>
               </>
             )}
+            </div>
           </div>
         )}
       </div>
@@ -199,7 +200,8 @@ export function AppShell() {
     // <main>) count as swipe zones.
     <div className={cn('min-h-svh')} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <Header />
-      <main className="max-w-[640px] mx-auto px-[18px] pt-3 pb-[112px]">
+      {/* Clears the floating nav: its top edge sits at inset + 74px. */}
+      <main className="max-w-[640px] mx-auto px-[18px] pt-3 pb-[calc(env(safe-area-inset-bottom)+96px)]">
         <Screen key={screen} dir={dir}>
           {renderScreen(screen)}
         </Screen>

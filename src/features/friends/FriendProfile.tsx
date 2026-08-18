@@ -7,7 +7,10 @@ import { listContainer, listItem } from '../../theme/motion';
 import { consistencyFromDates } from '../../lib/formulas';
 import { fmtWeight, unitLabel } from '../../lib/units';
 import {
+  addComment,
   clearReaction,
+  deleteComment,
+  fetchComments,
   fetchFriendProfile,
   fetchFriendWorkouts,
   fetchReactions,
@@ -314,12 +317,16 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
 
       {commentsKey && (
         <CommentsSheet
-          open={commentsKey != null}
+          key={commentsKey}
+          open
           onClose={() => setCommentsKey(null)}
-          ownerId={friendId}
-          workoutKey={commentsKey}
           myId={myId}
           names={names}
+          api={{
+            list: () => fetchComments(friendId, commentsKey),
+            add: (authorId, body) => addComment(friendId, commentsKey, authorId, body),
+            remove: (id) => deleteComment(id),
+          }}
         />
       )}
 
