@@ -89,6 +89,9 @@ interface AppActions {
   removeGoal: (id: string) => void;
   /** Latch a goal as reached. No-op once already complete. */
   completeGoal: (id: string) => void;
+
+  /** Persist any newly-earned achievements; returns the ids unlocked just now. */
+  unlockAchievements: (earnedIds: string[]) => string[];
   // supplements
   addSupplement: (s: Omit<Supplement, 'id'>) => void;
   removeSupplement: (id: string) => void;
@@ -296,6 +299,9 @@ export const useStore = create<Store>()(
           dayName: sess.dayName,
           exercises,
           durationSec: Math.round((Date.now() - sess.startedAt) / 1000),
+          // Clock time the session began — the date alone can't tell an early
+          // morning session from a late night one.
+          startedAt: sess.startedAt,
           rating: meta?.rating,
           note: meta?.note,
         };
@@ -342,6 +348,16 @@ export const useStore = create<Store>()(
             g.id === id && !g.completedAt ? { ...g, completedAt: new Date().toISOString() } : g,
           ),
         })),
+
+      // ---- achievements ----
+      unlockAchievements: (earnedIds) => {
+        const known = new Set(get().achievements.map((a) => a.id));
+        const fresh = earnedIds.filter((id) => !known.has(id));
+        if (fresh.length === 0) return [];
+        const unlockedAt = new Date().toISOString();
+        set((s) => ({ achievements: [...s.achievements, ...fresh.map((id) => ({ id, unlockedAt }))] }));
+        return fresh;
+      },
 
       // ---- supplements ----
       addSupplement: (sup) => set((s) => ({ supplements: [...s.supplements, { ...sup, id: uid() }] })),

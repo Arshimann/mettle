@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Plus, Target, X } from 'lucide-react';
+import { Check, ChevronRight, Plus, Target, X } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, Segmented, Sheet } from '../../components/ui';
+import { ExercisePicker } from '../../components/ExercisePicker';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { sfxPop } from '../../lib/sound';
@@ -63,6 +64,22 @@ const TYPE_OPTIONS = [
   { value: 'streak' as GoalType, label: 'Streak' },
 ];
 
+/** One-tap starting points, so a first goal isn't a blank form. */
+interface GoalPreset {
+  label: string;
+  hint: string;
+  type: GoalType;
+  target: number;
+  exercise?: string;
+}
+
+const PRESETS: GoalPreset[] = [
+  { label: 'Train 3× a week', hint: 'A sustainable base', type: 'frequency', target: 3 },
+  { label: 'Train 4× a week', hint: 'Serious but liveable', type: 'frequency', target: 4 },
+  { label: '7-day streak', hint: 'Get the habit started', type: 'streak', target: 7 },
+  { label: '30-day streak', hint: 'Make it who you are', type: 'streak', target: 30 },
+];
+
 export function Goals() {
   const goals = useStore((s) => s.goals);
   const history = useStore((s) => s.history);
@@ -77,6 +94,7 @@ export function Goals() {
   const [type, setType] = useState<GoalType>('lift');
   const [exercise, setExercise] = useState('');
   const [target, setTarget] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const unit = unitLabel(units);
 
@@ -184,15 +202,56 @@ export function Goals() {
       )}
 
       <Sheet open={open} onClose={() => setOpen(false)} title="New goal">
+        {goals.length === 0 && (
+          <div className="mb-4">
+            <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-fg-subtle mb-2">
+              Quick start
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => {
+                    haptics.success();
+                    addGoal({
+                      type: p.type,
+                      target: p.target,
+                      label: p.label,
+                      exercise: p.exercise,
+                      baseValue: 0,
+                    });
+                    setOpen(false);
+                  }}
+                  className="text-left rounded-card bg-surface-2 border border-border p-3"
+                >
+                  <div className="text-[13px] font-semibold leading-tight">{p.label}</div>
+                  <div className="text-[11px] text-fg-subtle mt-0.5">{p.hint}</div>
+                </button>
+              ))}
+            </div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-fg-subtle mt-4 mb-2">
+              Or build your own
+            </div>
+          </div>
+        )}
         <Segmented fullWidth value={type} onChange={setType} options={TYPE_OPTIONS} />
         <div className="mt-3 space-y-3">
+          {/* Picked, never typed: progress matches on an exact name, so a typo
+              used to pin a lift goal at 0 forever. */}
           {type === 'lift' && (
-            <input
-              value={exercise}
-              onChange={(e) => setExercise(e.target.value)}
-              placeholder="Exercise (e.g. Bench Press)"
-              className="w-full h-12 px-3.5 rounded-btn bg-surface-2 border border-border text-[15px] outline-none focus:border-border-strong"
-            />
+            <button
+              onClick={() => {
+                haptics.tap();
+                setPickerOpen(true);
+              }}
+              className={cn(
+                'w-full h-12 px-3.5 rounded-btn bg-surface-2 border text-[15px] text-left flex items-center justify-between',
+                exercise ? 'border-border text-fg' : 'border-border text-fg-subtle',
+              )}
+            >
+              <span className="truncate">{exercise || 'Choose an exercise'}</span>
+              <ChevronRight size={16} className="text-fg-subtle shrink-0" />
+            </button>
           )}
           <input
             inputMode="decimal"
@@ -208,6 +267,15 @@ export function Goals() {
           </Button>
         </div>
       </Sheet>
+
+      <ExercisePicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onPick={(name) => {
+          setExercise(name);
+          setPickerOpen(false);
+        }}
+      />
     </Card>
   );
 }

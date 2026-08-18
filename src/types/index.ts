@@ -32,6 +32,8 @@ export interface HistoryEntry {
   rating?: number; // 1–5
   note?: string;
   durationSec?: number;
+  /** Epoch ms the session started. Absent on entries logged before v1.1. */
+  startedAt?: number;
 }
 
 /** How a template or saved preset lands: swap the split, or add to it. */

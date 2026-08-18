@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
-import { ChevronRight, Dumbbell, Flame, Moon, Play, Plus } from 'lucide-react';
+import { ChevronRight, Dumbbell, Flame, Moon, Play, Plus, Snowflake } from 'lucide-react';
 import { Button, Card, CardLabel, CountUp } from '../../components/ui';
 import { heroContainer, heroItem, listItem, spring } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
-import { computeStreak, sessionVolume } from '../../lib/formulas';
+import { FREEZES_PER_WEEK, sessionVolume, streakInfo } from '../../lib/formulas';
 import { nextDay } from '../../lib/training';
 import { prettyDate, todayStr, daysTrainedInWeek, startOfWeek } from '../../lib/date';
 import { unitLabel } from '../../lib/units';
@@ -43,7 +43,7 @@ export function Dashboard() {
   // Distinct days this Mon–Sun week — the same measure a frequency goal uses,
   // so the "this week" stat and the goal bar can never disagree.
   const thisWeek = daysTrainedInWeek(history.map((h) => h.date), today);
-  const streak = computeStreak(history);
+  const { days: streak, freezesLeft, atRisk } = streakInfo(history);
   const last = history[0];
   // The whole weekly recap reads from one week definition, so its three numbers
   // always describe the same stretch of days.
@@ -79,13 +79,36 @@ export function Dashboard() {
             >
               <Flame size={24} fill="currentColor" strokeWidth={0} />
             </div>
-            <div className="relative">
+            <div className="relative min-w-0">
               <div className="stat-xl">
                 {streak}
                 <span className="text-lg font-bold text-fg-muted tracking-normal"> day{streak === 1 ? '' : 's'}</span>
               </div>
-              <div className="text-xs text-fg-muted mt-1.5">Current streak — keep it alive.</div>
+              <div className="text-xs text-fg-muted mt-1.5">
+                {atRisk
+                  ? 'No rest days left this week — train today to keep it.'
+                  : freezesLeft > 0
+                    ? `Current streak · ${freezesLeft} rest day${freezesLeft === 1 ? '' : 's'} left this week.`
+                    : 'Current streak — keep it alive.'}
+              </div>
             </div>
+            {/* Rest days act as freezes: two a week, spent automatically. */}
+            {freezesLeft > 0 && (
+              <div className="relative ml-auto flex flex-col items-center gap-1 shrink-0">
+                <div className="flex gap-1">
+                  {Array.from({ length: FREEZES_PER_WEEK }, (_, i) => (
+                    <Snowflake
+                      key={i}
+                      size={15}
+                      className={i < freezesLeft ? 'text-accent' : 'text-fg-subtle/35'}
+                      fill={i < freezesLeft ? 'currentColor' : 'none'}
+                      strokeWidth={i < freezesLeft ? 0 : 2}
+                    />
+                  ))}
+                </div>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-fg-subtle">rest</span>
+              </div>
+            )}
           </Card>
         </motion.div>
       )}

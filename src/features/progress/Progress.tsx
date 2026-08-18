@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, Star, TrendingUp } from 'lucide-react';
-import { Card, CardLabel, EmptyState, PageHeader } from '../../components/ui';
+import { Card, CardLabel, EmptyState, PageHeader, Segmented } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { listContainer, listItem } from '../../theme/motion';
@@ -15,6 +15,7 @@ import { LineChart } from './LineChart';
 const LIB_GROUP = new Map(EXERCISE_LIBRARY.map((e) => [e.name.toLowerCase(), e.group]));
 
 type TrendGroup = MuscleGroup | 'Other';
+type Metric = 'e1rm' | 'top';
 
 export function Progress() {
   const prs = useStore((s) => s.prs);
@@ -55,6 +56,11 @@ export function Progress() {
   const sel =
     selected && activeGroup?.names.includes(selected) ? selected : (activeGroup?.names[0] ?? null);
 
+  // Estimated 1RM smooths across rep ranges; top-set weight is the number you
+  // actually put on the bar. Both plot one best-of-session point, so the trend
+  // stays honest either way.
+  const [metric, setMetric] = useState<Metric>('e1rm');
+
   const chartData = useMemo(() => {
     if (!sel) return [];
     const lower = sel.toLowerCase();
@@ -62,10 +68,33 @@ export function Progress() {
       .reverse()
       .flatMap((h) => {
         const ex = h.exercises.find((e) => e.name.toLowerCase() === lower);
-        return ex ? [{ value: bestE1RM(ex.sets), label: prettyDate(h.date) }] : [];
+        if (!ex) return [];
+        const value =
+          metric === 'e1rm' ? bestE1RM(ex.sets) : Math.max(0, ...ex.sets.map((s) => s.weight));
+        return value > 0 ? [{ value, label: prettyDate(h.date) }] : [];
       });
-  }, [history, sel]);
+  }, [history, sel, metric]);
   const bestEver = chartData.length ? Math.max(...chartData.map((d) => d.value)) : 0;
+
+  /** Every logged lift ranked by best estimated 1RM, with its heaviest set. */
+  const bestLifts = useMemo(() => {
+    const map = new Map<string, { name: string; e1rm: number; topSet: number; reps: number; date: string }>();
+    for (const h of history) {
+      for (const ex of h.exercises) {
+        const key = ex.name.toLowerCase();
+        for (const st of ex.sets) {
+          if (!st.weight || !st.reps) continue;
+          const e1 = estimate1RM(st.weight, st.reps);
+          const cur = map.get(key);
+          if (!cur || e1 > cur.e1rm) {
+            map.set(key, { name: ex.name, e1rm: e1, topSet: st.weight, reps: st.reps, date: h.date });
+          }
+        }
+      }
+    }
+    return [...map.values()].sort((a, b) => b.e1rm - a.e1rm);
+  }, [history]);
+  const [showAllLifts, setShowAllLifts] = useState(false);
 
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -92,12 +121,23 @@ export function Progress() {
         <motion.div variants={listItem}>
           <Card className="mb-3.5">
             <div className="flex items-center justify-between mb-2">
-              <CardLabel className="mb-0">Estimated 1RM · {sel}</CardLabel>
+              <CardLabel className="mb-0">{sel}</CardLabel>
               {bestEver > 0 && (
                 <span className="text-sm font-bold tabular">
                   {fmtWeight(bestEver, units)} {unitLabel(units)}
                 </span>
               )}
+            </div>
+            <div className="mb-3">
+              <Segmented
+                fullWidth
+                value={metric}
+                onChange={setMetric}
+                options={[
+                  { value: 'e1rm' as Metric, label: 'Est. 1RM' },
+                  { value: 'top' as Metric, label: 'Top set' },
+                ]}
+              />
             </div>
             {chartData.length >= 2 ? (
               <LineChart data={chartData} format={(v) => `${fmtWeight(v, units)} ${unitLabel(units)}`} />
@@ -139,6 +179,55 @@ export function Progress() {
                   </button>
                 ))}
               </div>
+            )}
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Every lift you've logged, ranked. PRs below are the moments you beat
+          yourself; this is simply where each lift stands. */}
+      {bestLifts.length > 0 && (
+        <motion.div variants={listItem}>
+          <Card className="mb-3.5">
+            <div className="flex items-center justify-between mb-1">
+              <CardLabel className="mb-0">Best lifts</CardLabel>
+              <span className="text-xs text-fg-subtle">est. 1RM</span>
+            </div>
+            <div className="divide-y divide-border">
+              {(showAllLifts ? bestLifts : bestLifts.slice(0, 6)).map((l, i) => (
+                <div key={l.name} className="flex items-center gap-3 py-2.5">
+                  <span
+                    className={cn(
+                      'w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold shrink-0 tabular',
+                      i === 0 ? 'bg-accent bg-accent-grad text-accent-fg' : 'bg-surface-2 text-fg-muted',
+                    )}
+                  >
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium truncate text-[15px]">{l.name}</div>
+                    <div className="text-xs text-fg-subtle">
+                      best set {fmtWeight(l.topSet, units)}
+                      {unitLabel(units)} × {l.reps} · {prettyDate(l.date)}
+                    </div>
+                  </div>
+                  <span className="font-bold tabular shrink-0">
+                    {fmtWeight(l.e1rm, units)}
+                    <span className="text-xs text-fg-muted font-medium"> {unitLabel(units)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            {bestLifts.length > 6 && (
+              <button
+                onClick={() => {
+                  haptics.tap();
+                  setShowAllLifts((v) => !v);
+                }}
+                className="w-full text-[13px] font-semibold text-accent mt-2.5"
+              >
+                {showAllLifts ? 'Show top 6' : `Show all ${bestLifts.length}`}
+              </button>
             )}
           </Card>
         </motion.div>
