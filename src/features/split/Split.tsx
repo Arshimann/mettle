@@ -14,10 +14,11 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Bookmark, Dumbbell, GripVertical, LayoutGrid, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Bookmark, Dumbbell, GripVertical, LayoutGrid, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { Button, Card, EmptyState, PageHeader, Sheet, Sortable, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { TemplateBrowser } from './TemplateBrowser';
+import { SplitQuiz } from './SplitQuiz';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
@@ -44,6 +45,7 @@ export function Split() {
   const [nameSheet, setNameSheet] = useState<{ id: string | null; value: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
   const [presetName, setPresetName] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(
     () => (addExerciseParam ? `Add ${addExerciseParam} to a day` : null),
@@ -144,6 +146,9 @@ export function Split() {
                 <Bookmark size={15} /> Save
               </Button>
             )}
+            <Button size="sm" onClick={() => { haptics.tap(); setQuizOpen(true); }} aria-label="Build me a split">
+              <Sparkles size={15} /> Build
+            </Button>
             <Button size="sm" onClick={() => { haptics.tap(); setTemplatesOpen(true); }}>
               <LayoutGrid size={15} /> Templates
             </Button>
@@ -155,6 +160,7 @@ export function Split() {
       />
 
       <TemplateBrowser open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
+      <SplitQuiz open={quizOpen} onClose={() => setQuizOpen(false)} />
 
       {split.length === 0 ? (
         <Card className="p-0">
