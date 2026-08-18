@@ -25,6 +25,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       'Seven themes, including Editorial and Volt returning from the old days, any accent colour you like, and an optional heavy-metal font.',
       'Recovery moved inside Stretch — same content, one less tab.',
       'Home gains today’s lesson, a hand-picked video, friend activity, and 15 more facts. It’ll greet you by name if you set one.',
+      'A notification bell — reactions, comments, friend requests, and when a friend starts training. Live while the app is open.',
       'When a lift stalls, the app asks whether it was a deload or fatigue instead of guessing.',
       'New logo.',
     ],
