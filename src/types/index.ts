@@ -34,7 +34,13 @@ export interface HistoryEntry {
   durationSec?: number;
   /** Epoch ms the session started. Absent on entries logged before v1.1. */
   startedAt?: number;
+  /** Why a stalled lift stalled, answered right after saving. Keyed by
+   *  exercise name; feeds the coaching read rather than guessing. */
+  stallReasons?: Record<string, StallReason>;
 }
+
+/** A plateau is either planned backing-off or accumulated fatigue. */
+export type StallReason = 'deload' | 'fatigue' | 'pushing';
 
 /** How a template or saved preset lands: swap the split, or add to it. */
 export type ApplyMode = 'replace' | 'append';

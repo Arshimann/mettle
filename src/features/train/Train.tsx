@@ -4,6 +4,7 @@ import { Award, Calculator, Check, Dumbbell, Pencil, Plus, Trash2 } from 'lucide
 import { Button, Card, CardLabel, EmptyState, PageHeader, Sheet, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { EditDaySheet } from './EditDaySheet';
+import { StallPrompt } from './StallPrompt';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { listContainer, listItem, revealBlur } from '../../theme/motion';
@@ -12,7 +13,7 @@ import { useSocial } from '../../store/useSocial';
 import { useUI } from '../../store/useUI';
 import { lastPerformance, suggestNextKg } from '../../lib/training';
 import { distanceLabel, fmtWeight, fromKg, loadIncrement, paceLabel, toKm, unitLabel } from '../../lib/units';
-import { sessionVolume } from '../../lib/formulas';
+import { sessionVolume, stalledExercises } from '../../lib/formulas';
 import { sfxFanfare, sfxSetDone, sfxSparkle } from '../../lib/sound';
 import { quoteForCount } from '../../data/quotes';
 import { EXERCISE_LIBRARY } from '../../data/exercises';
@@ -131,6 +132,7 @@ export function Train() {
   const autoRest = useStore((s) => s.settings.autoRest);
   const startSession = useStore((s) => s.startSession);
   const cancelSession = useStore((s) => s.cancelSession);
+  const setStallReasons = useStore((s) => s.setStallReasons);
   const endSession = useStore((s) => s.endSession);
   const update = useStore((s) => s.updateSession);
   const navigate = useUI((s) => s.navigate);
@@ -141,6 +143,7 @@ export function Train() {
   const [celebration, setCelebration] = useState<EndSessionResult | null>(null);
   const [confirmEndDiscard, setConfirmEndDiscard] = useState(false);
   const [editDayId, setEditDayId] = useState<string | null>(null);
+  const [pendingStalls, setPendingStalls] = useState<{ entryId: string; names: string[] } | null>(null);
   const [tools, setTools] = useState<{ ei: number; name: string; target: number } | null>(null);
   const [flashReps, setFlashReps] = useState<{ ei: number; si: number } | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -167,6 +170,21 @@ export function Train() {
         result={celebration}
         onDone={() => {
           setCelebration(null);
+          // The stall question waits until after the party — never interrupts it.
+          if (!pendingStalls?.names.length) navigate('progress');
+        }}
+      />
+    );
+  }
+
+  // ---- "why did this stall?", asked once, after the celebration ----
+  if (pendingStalls && pendingStalls.names.length > 0) {
+    return (
+      <StallPrompt
+        exercises={pendingStalls.names}
+        onDone={(reasons) => {
+          if (Object.keys(reasons).length > 0) setStallReasons(pendingStalls.entryId, reasons);
+          setPendingStalls(null);
           navigate('progress');
         }}
       />
@@ -368,6 +386,14 @@ export function Train() {
     if (result) {
       // Fire-and-forget: friends see the workout without holding up the party.
       useSocial.getState().publishFinishedWorkout(result.entry, result.prHits);
+      // Anything that just set a PR obviously isn't stalled — only ask about
+      // the rest, and only about lifts in the session we just saved.
+      const logged = new Set(result.entry.exercises.map((e) => e.name.toLowerCase()));
+      const prNames = new Set(result.prHits.map((n) => n.toLowerCase()));
+      const stalled = stalledExercises(useStore.getState().history, { excludeNames: prNames })
+        .filter((n) => logged.has(n.toLowerCase()))
+        .slice(0, 3);
+      setPendingStalls({ entryId: result.entry.id, names: stalled });
       setCelebration(result);
     } else navigate('home');
   };

@@ -168,6 +168,40 @@ export function computeStreak(history: HistoryEntry[]): number {
   return streakInfo(history).days;
 }
 
+/**
+ * Lifts whose best estimated 1RM hasn't improved across their last few
+ * sessions. Needs at least `sessions` data points so a second-ever workout
+ * never gets called a plateau.
+ */
+export function stalledExercises(
+  history: HistoryEntry[],
+  opts: { sessions?: number; excludeNames?: Set<string> } = {},
+): string[] {
+  const sessions = opts.sessions ?? 3;
+  const byName = new Map<string, { name: string; e1rms: number[] }>();
+  // history is newest-first; take each lift's most recent `sessions` entries.
+  for (const h of history) {
+    for (const ex of h.exercises) {
+      const key = ex.name.toLowerCase();
+      if (opts.excludeNames?.has(key)) continue;
+      const e1 = bestE1RM(ex.sets);
+      if (e1 <= 0) continue; // cardio and bodyweight-only work can't stall on load
+      const cur = byName.get(key) ?? { name: ex.name, e1rms: [] };
+      if (cur.e1rms.length < sessions) cur.e1rms.push(e1);
+      byName.set(key, cur);
+    }
+  }
+  const out: string[] = [];
+  for (const { name, e1rms } of byName.values()) {
+    if (e1rms.length < sessions) continue;
+    // e1rms[0] is the newest. Stalled = the newest is no better than the best
+    // of the earlier ones.
+    const best = Math.max(...e1rms.slice(1));
+    if (e1rms[0] <= best) out.push(name);
+  }
+  return out;
+}
+
 export interface WeekTower {
   /** Monday of the week, ISO. */
   weekStart: string;

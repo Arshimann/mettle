@@ -23,6 +23,7 @@ import type {
   Settings,
   SplitDay,
   SplitExercise,
+  StallReason,
   Supplement,
   TabToggles,
   TrainingStyle,
@@ -92,6 +93,9 @@ interface AppActions {
 
   /** Persist any newly-earned achievements; returns the ids unlocked just now. */
   unlockAchievements: (earnedIds: string[]) => string[];
+
+  /** Attach why each stalled lift stalled to a saved workout. */
+  setStallReasons: (entryId: string, reasons: Record<string, StallReason>) => void;
   // supplements
   addSupplement: (s: Omit<Supplement, 'id'>) => void;
   removeSupplement: (id: string) => void;
@@ -346,6 +350,13 @@ export const useStore = create<Store>()(
         set((s) => ({
           goals: s.goals.map((g) =>
             g.id === id && !g.completedAt ? { ...g, completedAt: new Date().toISOString() } : g,
+          ),
+        })),
+
+      setStallReasons: (entryId, reasons) =>
+        set((s) => ({
+          history: s.history.map((h) =>
+            h.id === entryId ? { ...h, stallReasons: { ...h.stallReasons, ...reasons } } : h,
           ),
         })),
 
