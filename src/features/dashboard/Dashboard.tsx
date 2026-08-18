@@ -9,6 +9,8 @@ import { nextDay } from '../../lib/training';
 import { prettyDate, todayStr, daysTrainedInWeek, startOfWeek } from '../../lib/date';
 import { unitLabel } from '../../lib/units';
 import { DidYouKnow } from './DidYouKnow';
+import { TodaysLesson } from './TodaysLesson';
+import { DailyWatch } from './DailyWatch';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -256,6 +258,18 @@ export function Dashboard() {
               {Math.round(sessionVolume(last.exercises)).toLocaleString()} {unitLabel(units)} volume
             </p>
           </Card>
+        </motion.div>
+      )}
+
+      {display.todaysLesson && (
+        <motion.div variants={listItem}>
+          <TodaysLesson />
+        </motion.div>
+      )}
+
+      {display.dailyWatch && (
+        <motion.div variants={listItem}>
+          <DailyWatch />
         </motion.div>
       )}
 

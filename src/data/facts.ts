@@ -157,4 +157,79 @@ export const FACTS: Fact[] = [
     body: 'Slumping over your phone raises perceived effort. Easy breathing, a short stroll, or just standing upright clears fatigue between sets better.',
     source: 'Inter-set recovery research',
   },
+  {
+    title: 'Your height changes during the day',
+    body: 'Spinal discs compress under load, so most people measure one to two centimetres shorter by evening than they did on waking. Lying down and hanging restore it. Real, but temporary — nothing there lengthens bone.',
+    source: 'Diurnal spinal height variation research',
+  },
+  {
+    title: 'Soreness is a poor progress signal',
+    body: 'DOMS tracks novelty and eccentric load far more than growth. A movement you have done for months can stop making you sore while still building muscle perfectly well.',
+    source: 'DOMS and hypertrophy literature',
+  },
+  {
+    title: 'Front delts get trained whether you plan it or not',
+    body: 'Every pressing movement hits them. It is why they are the most commonly over-worked region on a chest-heavy program, and why side and rear delts usually need the deliberate work instead.',
+    source: 'EMG studies of pressing movements',
+  },
+  {
+    title: 'Caffeine is still working at bedtime',
+    body: 'Its half-life is roughly five to six hours, so an afternoon coffee leaves a meaningful dose in your system at night — trading sleep quality for a training boost you barely felt.',
+    source: 'Caffeine pharmacokinetics',
+  },
+  {
+    title: 'Lifting weights builds bone',
+    body: 'Resistance training increases bone mineral density, and the effect is largest at the sites you load. It is one of the few interventions that meaningfully slows age-related bone loss.',
+    source: 'Resistance training and bone density research',
+  },
+  {
+    title: 'Grip often fails before the muscle does',
+    body: 'On heavy rows and pulls your hands can quit while your back has plenty left. Straps are not cheating — they let you train the muscle you actually came for.',
+    source: 'Limiting-factor analysis in pulling movements',
+  },
+  {
+    title: 'The stretched position does the heavy lifting',
+    body: 'Exercises loading a muscle while it is lengthened — deep squats, Romanian deadlifts, overhead extensions — tend to produce more growth than the same effort in a shortened position.',
+    source: 'Lengthened-position training research',
+  },
+  {
+    title: 'A week off costs almost nothing',
+    body: 'Muscle is largely preserved through a week of no training, and strength holds for two to three. The panic about missing sessions costs more than the missed sessions do.',
+    source: 'Detraining literature',
+  },
+  {
+    title: 'Muscle memory is a physical thing',
+    body: 'Previously trained muscle keeps extra nuclei inside its fibres long after size is lost. That appears to be why regaining old muscle is dramatically faster than building it the first time.',
+    source: 'Gundersen, myonuclei and muscle memory (2016)',
+  },
+  {
+    title: 'Warming up is not stretching',
+    body: 'Long static holds before lifting can slightly reduce force output. Ramp-up sets and easy movement prepare you better; save the long holds for after, or for their own session.',
+    source: 'Pre-exercise static stretching research',
+  },
+  {
+    title: 'Protein timing matters far less than the total',
+    body: 'The "anabolic window" is hours wide, not thirty minutes. Hitting your daily protein target reliably beats obsessing over when you hit it.',
+    source: 'Protein timing meta-analyses',
+  },
+  {
+    title: 'Strength gains come before size',
+    body: 'The first weeks of training improve how well your nervous system recruits the muscle you already have. The weight climbs before the tissue does — that is normal, not an illusion.',
+    source: 'Neural adaptation research',
+  },
+  {
+    title: 'Sleep loss lowers testosterone within a week',
+    body: 'Restricting healthy young men to five hours a night for one week reduced daytime testosterone by 10 to 15%. No legal supplement moves the needle anywhere near that far.',
+    source: 'Leproult & Van Cauter (2011)',
+  },
+  {
+    title: 'Machines and free weights both build muscle',
+    body: 'When effort and volume match, growth is similar. Free weights train balance and skill; machines let you push closer to the limit safely. Use whichever lets you overload well.',
+    source: 'Free-weight vs machine comparisons',
+  },
+  {
+    title: 'Rest longer than feels necessary',
+    body: 'Two to three minutes between hard compound sets lets you do meaningfully more total reps. The idea that short rest builds more muscle through a hormone response has not held up.',
+    source: 'Rest interval and hypertrophy research',
+  },
 ];

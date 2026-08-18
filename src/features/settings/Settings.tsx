@@ -44,6 +44,8 @@ const DISPLAY_LABELS: Record<keyof DisplayToggles, string> = {
   weeklyRecap: 'Weekly recap',
   upNext: 'Up next',
   didYouKnow: 'Did you know',
+  todaysLesson: "Today's lesson",
+  dailyWatch: "Today's watch",
 };
 
 function download(filename: string, text: string) {

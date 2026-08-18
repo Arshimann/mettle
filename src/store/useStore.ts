@@ -148,6 +148,8 @@ const initialData: AppData = {
       streak: true,
       weeklyRecap: true,
       didYouKnow: true,
+      todaysLesson: true,
+      dailyWatch: true,
       upNext: true,
     },
   },

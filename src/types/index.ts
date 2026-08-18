@@ -138,6 +138,8 @@ export interface DisplayToggles {
   streak: boolean;
   weeklyRecap: boolean;
   didYouKnow: boolean;
+  todaysLesson: boolean;
+  dailyWatch: boolean;
   upNext: boolean;
 }
 
