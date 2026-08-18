@@ -21,6 +21,7 @@ import { TemplateBrowser } from './TemplateBrowser';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
+import { useUI } from '../../store/useUI';
 
 const exId = (dayId: string, name: string) => `${dayId}::${name}`;
 
@@ -31,15 +32,22 @@ export function Split() {
   const removeDay = useStore((s) => s.removeDay);
   const setDays = useStore((s) => s.setDays);
   const savedSplits = useStore((s) => s.savedSplits);
+  const addExerciseParam = useUI((s) => s.params.addExercise) as string | undefined;
 
   const saveCurrentSplit = useStore((s) => s.saveCurrentSplit);
 
-  const [pickerForDay, setPickerForDay] = useState<string | null>(null);
+  // Arriving from an insight ("side delts are behind — add Lateral Raise")
+  // opens the picker straight away, on mount, rather than after a render pass.
+  const [pickerForDay, setPickerForDay] = useState<string | null>(() =>
+    addExerciseParam && split.length > 0 ? split[0].id : null,
+  );
   const [nameSheet, setNameSheet] = useState<{ id: string | null; value: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [presetName, setPresetName] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(
+    () => (addExerciseParam ? `Add ${addExerciseParam} to a day` : null),
+  );
   const [targetSheet, setTargetSheet] = useState<{ dayId: string; idx: number; name: string; sets: string; reps: string } | null>(null);
 
   const sensors = useSensors(

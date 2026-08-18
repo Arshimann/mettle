@@ -11,6 +11,9 @@ import { fromKg, unitLabel } from '../../lib/units';
 import { EXERCISE_LIBRARY, MUSCLE_GROUPS, type MuscleGroup } from '../../data/exercises';
 import { LESSONS } from '../../data/lessons';
 import { LineChart } from '../progress/LineChart';
+import { buildMuscleReport } from '../../lib/muscleAnalysis';
+import { MuscleBalance } from './MuscleBalance';
+import { useUI } from '../../store/useUI';
 
 const GROUP_OF = new Map(EXERCISE_LIBRARY.map((e) => [e.name.toLowerCase(), e.group]));
 
@@ -31,9 +34,16 @@ function Stat({ value, label, suffix }: { value: number; label: string; suffix?:
 
 export function Learn() {
   const history = useStore((s) => s.history);
+  const navigate = useUI((s) => s.navigate);
   const prs = useStore((s) => s.prs);
   const units = useStore((s) => s.settings.units);
+  const customExercises = useStore((s) => s.customExercises);
   const [openLesson, setOpenLesson] = useState<number | null>(null);
+
+  const muscleReport = useMemo(
+    () => buildMuscleReport(history, customExercises),
+    [history, customExercises],
+  );
 
   const m = useMemo(() => {
     let sets = 0;
@@ -161,6 +171,13 @@ export function Learn() {
         )}
         {hasData && (
           <>
+            {/* The fine-grained read comes first — it's the specific one. */}
+            <motion.div variants={listItem}>
+              <MuscleBalance
+                report={muscleReport}
+                onAddExercise={(name) => navigate('split', { addExercise: name })}
+              />
+            </motion.div>
             {m.read && (
               <motion.div variants={listItem}>
                 <Card>
