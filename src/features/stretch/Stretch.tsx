@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ListChecks, Plus, Search, Trash2, Wand2 } from 'lucide-react';
-import { Card, PageHeader, Sheet } from '../../components/ui';
+import { HeartPulse, Info, ListChecks, Plus, Search, Trash2, Wand2 } from 'lucide-react';
+import { Card, CardLabel, PageHeader, Sheet } from '../../components/ui';
 import { listContainer, listItem } from '../../theme/motion';
 import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
 import { STRETCH_CATEGORIES, type PlayableRoutine } from '../../data/stretches';
+import { RECOVERY_CATEGORIES, RECOVERY_DISCLAIMER } from '../../data/recovery';
 import { RoutinePlayer } from './RoutinePlayer';
 import { CategoryCard, RoutineDetailSheet, type CatalogItem } from './RoutineDetailSheet';
 import { AllStretches } from './AllStretches';
@@ -75,6 +76,25 @@ export function Stretch() {
         )}
 
         {STRETCH_CATEGORIES.map((cat) => (
+          <motion.div key={cat.id} variants={listItem}>
+            <CategoryCard item={cat} onOpen={() => setActive(cat)} />
+          </motion.div>
+        ))}
+
+        {/* Recovery lives here now — it always shared these components, and a
+            whole tab for six rehab routines was more nav than it earned. */}
+        <motion.div variants={listItem} className="pt-3">
+          <div className="flex items-center gap-2 px-0.5 mb-2">
+            <HeartPulse size={16} className="text-accent" />
+            <CardLabel className="mb-0">Recovery</CardLabel>
+          </div>
+          <Card className="flex gap-3 p-3.5 mb-3">
+            <Info size={16} className="text-fg-subtle shrink-0 mt-0.5" />
+            <p className="text-[13px] text-fg-muted leading-snug">{RECOVERY_DISCLAIMER}</p>
+          </Card>
+        </motion.div>
+
+        {RECOVERY_CATEGORIES.map((cat) => (
           <motion.div key={cat.id} variants={listItem}>
             <CategoryCard item={cat} onOpen={() => setActive(cat)} />
           </motion.div>

@@ -5,7 +5,7 @@ import { appStorage } from '../lib/storage';
 import { uid } from '../lib/id';
 import { todayStr } from '../lib/date';
 import { parseNum, toKg, toKm } from '../lib/units';
-import { DEFAULT_THEME, normalizeTheme, type ThemeMode } from '../theme/themes';
+import { DEFAULT_SYSTEM_PAIR, DEFAULT_THEME, normalizeTheme, normalizeSystemPair, type ThemeMode } from '../theme/themes';
 import { STYLE_DEFS } from '../data/trainingStyles';
 import type { CustomRoutine, CustomStretch } from '../data/stretches';
 import { EXERCISE_LIBRARY } from '../data/exercises';
@@ -129,6 +129,10 @@ const cap = (n: number, max = 9999) => Math.min(Math.max(0, n), max);
 const initialData: AppData = {
   settings: {
     theme: DEFAULT_THEME,
+    systemPair: DEFAULT_SYSTEM_PAIR,
+    accent: null,
+    displayFont: 'default',
+    displayFontScope: 'wordmark',
     units: 'kg',
     onboarded: false,
     preferredRest: 120,
@@ -140,7 +144,7 @@ const initialData: AppData = {
     soundFx: true,
     trainingStyle: null,
     lastSeenVersion: '',
-    tabs: { split: true, stretch: true, recovery: false, progress: true, learn: false, friends: true },
+    tabs: { split: true, stretch: true, progress: true, learn: false, friends: true },
     display: {
       stats: true,
       dayCards: true,
@@ -497,9 +501,16 @@ export const useStore = create<Store>()(
       // v1 → v2: the four-theme system collapsed into one signature look with
       // dark/light modes. Old picks map to the nearest scene.
       migrate: (persisted, version) => {
-        if (version < 2) {
-          const p = persisted as Partial<AppData> | undefined;
-          if (p?.settings) p.settings.theme = normalizeTheme(p.settings.theme);
+        const p = persisted as (Partial<AppData> & { settings?: Partial<Settings> & { tabs?: Record<string, boolean> } }) | undefined;
+        if (version < 2 && p?.settings) {
+          p.settings.theme = normalizeTheme(p.settings.theme);
+        }
+        if (version < 3 && p?.settings?.tabs) {
+          // Recovery merged into Stretch. Anyone who had Recovery on must keep
+          // reaching that content, so Stretch is switched on for them.
+          const tabs = p.settings.tabs;
+          if (tabs.recovery) tabs.stretch = true;
+          delete tabs.recovery;
         }
         return persisted as AppData;
       },
@@ -519,6 +530,7 @@ export const useStore = create<Store>()(
             ...current.settings,
             ...ps,
             tabs: { ...current.settings.tabs, ...(ps.tabs ?? {}) },
+            systemPair: normalizeSystemPair(ps.systemPair),
             display: { ...current.settings.display, ...(ps.display ?? {}) },
           },
           profile,

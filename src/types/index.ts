@@ -1,4 +1,5 @@
-import type { ThemeMode } from '../theme/themes';
+import type { SystemPair, ThemeMode } from '../theme/themes';
+import type { DisplayFont, FontScope } from '../theme/displayFont';
 import type { MuscleGroup } from '../data/exercises';
 
 export type Units = 'kg' | 'lbs';
@@ -125,6 +126,9 @@ export interface Achievement {
 }
 
 export interface Profile {
+  /** Optional first name, used only for the greeting. Stays local — the social
+   *  displayName is a separate, published thing. */
+  name?: string;
   height: number | null; // cm
   age: number | null;
   sex: Sex;
@@ -146,8 +150,8 @@ export interface DisplayToggles {
 /** Which optional bottom-nav tabs are visible. Home/Train/You are always on. */
 export interface TabToggles {
   split: boolean;
+  /** Stretch also holds Recovery since v1.1. */
   stretch: boolean;
-  recovery: boolean;
   progress: boolean;
   learn: boolean;
   friends: boolean;
@@ -155,6 +159,12 @@ export interface TabToggles {
 
 export interface Settings {
   theme: ThemeMode;
+  /** Which themes 'system' alternates between. */
+  systemPair: SystemPair;
+  /** Overrides the active theme's accent. null = use the theme's own. */
+  accent: string | null;
+  displayFont: DisplayFont;
+  displayFontScope: FontScope;
   units: Units;
   onboarded: boolean;
   preferredRest: number; // seconds

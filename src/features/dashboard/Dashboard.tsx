@@ -12,12 +12,20 @@ import { DidYouKnow } from './DidYouKnow';
 import { TodaysLesson } from './TodaysLesson';
 import { DailyWatch } from './DailyWatch';
 
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 5) return 'Late night';
-  if (h < 12) return 'Good morning';
-  if (h < 18) return 'Good afternoon';
-  return 'Good evening';
+/**
+ * Time-of-day greeting, with the weekday folded in occasionally so it doesn't
+ * read identically every single morning. Uses your name when you've set one.
+ */
+function greeting(name?: string): string {
+  const now = new Date();
+  const h = now.getHours();
+  const base =
+    h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  // On a third of days, greet the day itself — "Good Monday" reads warmer.
+  const weekday = now.toLocaleDateString(undefined, { weekday: 'long' });
+  const useWeekday = h >= 5 && h < 18 && now.getDate() % 3 === 0;
+  const phrase = useWeekday ? `Good ${weekday}` : base;
+  return name ? `${phrase}, ${name}` : phrase;
 }
 
 function Stat({ value, label }: { value: number; label: string }) {
@@ -37,6 +45,7 @@ export function Dashboard() {
   const prs = useStore((s) => s.prs);
   const units = useStore((s) => s.settings.units);
   const display = useStore((s) => s.settings.display);
+  const profileName = useStore((s) => s.profile.name);
   const stretchEnabled = useStore((s) => s.settings.tabs.stretch);
   const startSession = useStore((s) => s.startSession);
   const navigate = useUI((s) => s.navigate);
@@ -62,7 +71,9 @@ export function Dashboard() {
   return (
     <motion.div variants={heroContainer} initial="hidden" animate="show" className="space-y-3.5">
       <motion.div variants={heroItem} className="mb-2">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-fg-muted">{greeting()}</p>
+        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-fg-muted">
+          {greeting(profileName?.trim() || undefined)}
+        </p>
         <h1 className="display-hero mt-1">
           {prettyDate(today) === 'Today' ? "Today's the day." : prettyDate(today)}
         </h1>

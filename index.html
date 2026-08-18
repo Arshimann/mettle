@@ -13,31 +13,59 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Mettle" />
     <title>Mettle</title>
-    <!-- Set the theme before paint to avoid a flash of the wrong palette.
-         Maps retired v0.x theme ids (editorial/bold) and resolves 'system'. -->
+    <!-- Set theme, accent and display font before paint, so there's no flash
+         of the wrong palette. This does the minimum: it writes the attributes
+         and the raw accent hex only. The derived accent tokens (gradient,
+         glow, contrast-checked foreground) need real colour maths and arrive
+         one tick later from React — invisible, since --accent alone already
+         paints every accent surface. -->
     <script>
       (function () {
+        // Canvas colours must match --canvas in index.css for each theme.
+        var CANVAS = {
+          dark: '#060608',
+          light: '#f7f7f5',
+          editorial: '#f5f3ec',
+          bold: '#0a0a0a',
+          ember: '#0d0a09',
+          sea: '#f2f6f6',
+          carbon: '#000000',
+        };
         var resolved = 'dark';
+        var settings = null;
         try {
           var raw = localStorage.getItem('mettle.v1');
-          var mode = 'dark';
           if (raw) {
             var parsed = JSON.parse(raw);
-            mode = (parsed && parsed.state && parsed.state.settings && parsed.state.settings.theme) || 'dark';
+            settings = (parsed && parsed.state && parsed.state.settings) || null;
           }
-          if (mode === 'bold') mode = 'dark';
-          if (mode === 'editorial') mode = 'light';
+          var mode = (settings && settings.theme) || 'dark';
           if (mode === 'system') {
-            mode = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            var pair = (settings && settings.systemPair) || {};
+            var light = pair.light || 'light';
+            var dark = pair.dark || 'dark';
+            mode = window.matchMedia('(prefers-color-scheme: light)').matches ? light : dark;
           }
-          if (mode === 'light' || mode === 'dark') resolved = mode;
+          if (CANVAS[mode]) resolved = mode;
         } catch (e) {
           /* fall through to dark */
         }
-        document.documentElement.dataset.theme = resolved;
-        if (resolved === 'light') {
-          var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', '#f7f7f5');
+        var el = document.documentElement;
+        el.dataset.theme = resolved;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', CANVAS[resolved]);
+        try {
+          if (settings) {
+            if (typeof settings.accent === 'string' && /^#[0-9a-f]{6}$/i.test(settings.accent) && resolved !== 'editorial') {
+              el.style.setProperty('--accent', settings.accent);
+            }
+            if (settings.displayFont === 'metal') {
+              el.dataset.font = 'metal';
+              el.dataset.fontScope = settings.displayFontScope || 'wordmark';
+            }
+          }
+        } catch (e) {
+          /* cosmetic only */
         }
       })();
     </script>

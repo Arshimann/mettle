@@ -16,7 +16,6 @@ import { Dashboard } from '../features/dashboard/Dashboard';
 import { Split } from '../features/split/Split';
 import { Train } from '../features/train/Train';
 import { Stretch } from '../features/stretch/Stretch';
-import { Recovery } from '../features/recovery/Recovery';
 import { Progress } from '../features/progress/Progress';
 import { Learn } from '../features/learn/Learn';
 import { Friends } from '../features/friends/Friends';
@@ -34,8 +33,6 @@ function renderScreen(screen: ScreenId) {
       return <Train />;
     case 'stretch':
       return <Stretch />;
-    case 'recovery':
-      return <Recovery />;
     case 'progress':
       return <Progress />;
     case 'learn':
