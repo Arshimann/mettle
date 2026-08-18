@@ -138,7 +138,7 @@ export function Train() {
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [celebration, setCelebration] = useState<EndSessionResult | null>(null);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmEndDiscard, setConfirmEndDiscard] = useState(false);
   const [tools, setTools] = useState<{ ei: number; name: string; target: number } | null>(null);
   const [flashReps, setFlashReps] = useState<{ ei: number; si: number } | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -583,23 +583,8 @@ export function Train() {
         Finish workout
       </Button>
 
-      <Button
-        variant="danger"
-        fullWidth
-        className="mt-2.5"
-        onClick={() => {
-          if (!confirmDiscard) {
-            setConfirmDiscard(true);
-            setTimeout(() => setConfirmDiscard(false), 3000);
-            return;
-          }
-          haptics.warn();
-          cancelSession();
-          navigate('home');
-        }}
-      >
-        {confirmDiscard ? 'Tap again to discard' : 'Discard workout'}
-      </Button>
+      {/* Discarding lives inside the "End workout?" sheet — one destructive
+          path, reached the same way as saving. */}
 
       {/* Clearance so the floating rest timer never covers the buttons above. */}
       {session.restEndsAt && <div className="h-28" aria-hidden="true" />}
@@ -627,10 +612,29 @@ export function Train() {
               setFinishOpen(true);
             }}
           >
-            End workout
+            Save &amp; finish
           </Button>
           <Button size="lg" fullWidth onClick={() => setConfirmEnd(false)}>
             Keep training
+          </Button>
+          {/* Second tap required — this throws the session away for good. */}
+          <Button
+            variant="danger"
+            size="lg"
+            fullWidth
+            onClick={() => {
+              if (!confirmEndDiscard) {
+                setConfirmEndDiscard(true);
+                setTimeout(() => setConfirmEndDiscard(false), 3000);
+                return;
+              }
+              haptics.warn();
+              cancelSession();
+              setConfirmEnd(false);
+              navigate('home');
+            }}
+          >
+            {confirmEndDiscard ? 'Tap again — this deletes it' : 'End without saving'}
           </Button>
         </div>
       </Sheet>

@@ -6,7 +6,7 @@ import { useStore } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
 import { computeStreak, sessionVolume } from '../../lib/formulas';
 import { nextDay } from '../../lib/training';
-import { prettyDate, todayStr, daysBetween } from '../../lib/date';
+import { prettyDate, todayStr, daysTrainedInWeek, startOfWeek } from '../../lib/date';
 import { unitLabel } from '../../lib/units';
 import { DidYouKnow } from './DidYouKnow';
 
@@ -40,22 +40,19 @@ export function Dashboard() {
   const navigate = useUI((s) => s.navigate);
 
   const today = todayStr();
-  const thisWeek = history.filter((h) => {
-    const d = daysBetween(h.date, today);
-    return d >= 0 && d < 7;
-  }).length;
+  // Distinct days this Mon–Sun week — the same measure a frequency goal uses,
+  // so the "this week" stat and the goal bar can never disagree.
+  const thisWeek = daysTrainedInWeek(history.map((h) => h.date), today);
   const streak = computeStreak(history);
   const last = history[0];
+  // The whole weekly recap reads from one week definition, so its three numbers
+  // always describe the same stretch of days.
+  const weekStart = startOfWeek(today);
+  const inThisWeek = (iso: string) => iso >= weekStart && iso <= today;
   const weekVolume = history
-    .filter((h) => {
-      const d = daysBetween(h.date, today);
-      return d >= 0 && d < 7;
-    })
+    .filter((h) => inThisWeek(h.date))
     .reduce((v, h) => v + sessionVolume(h.exercises), 0);
-  const weekPRs = prs.filter((p) => {
-    const d = daysBetween(p.date, today);
-    return d >= 0 && d < 7;
-  }).length;
+  const weekPRs = prs.filter((p) => inThisWeek(p.date)).length;
 
   const trainedToday = last?.date === today;
   const up = nextDay(split, history);
@@ -170,7 +167,7 @@ export function Dashboard() {
         </motion.div>
       )}
 
-      {split.length === 0 ? (
+      {!display.dayCards ? null : split.length === 0 ? (
         <motion.div variants={listItem}>
           <Card className="overflow-hidden">
             <CardLabel>Get started</CardLabel>

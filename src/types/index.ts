@@ -80,6 +80,10 @@ export interface Goal {
   createdAt: string;
   deadline?: string;
   baseValue?: number;
+  /** Set once, the first time the goal is reached — a goal you hit stays hit
+   *  even if the underlying number later drops (a weekly count rolls over,
+   *  body weight drifts back). */
+  completedAt?: string;
 }
 
 export interface Supplement {

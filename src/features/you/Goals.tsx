@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
-import { Plus, Target, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Check, Plus, Target, X } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, Segmented, Sheet } from '../../components/ui';
+import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
+import { sfxPop } from '../../lib/sound';
 import { useStore } from '../../store/useStore';
 import { computeStreak } from '../../lib/formulas';
 import { fromKg, parseNum, unitLabel } from '../../lib/units';
-import { daysBetween, todayStr } from '../../lib/date';
+import { daysTrainedInWeek } from '../../lib/date';
 import type { BodyWeightEntry, Goal, GoalType, HistoryEntry, PR, Units } from '../../types';
 
 interface GoalCtx {
@@ -42,13 +44,11 @@ function currentValue(goal: Goal, { history, prs, bodyWeight, units }: GoalCtx):
       });
       return Math.round(fromKg(best, units));
     }
-    case 'frequency': {
-      const today = todayStr();
-      return history.filter((h) => {
-        const d = daysBetween(h.date, today);
-        return d >= 0 && d < 7;
-      }).length;
-    }
+    case 'frequency':
+      // Distinct DAYS trained this Mon–Sun week — two sessions in one day is
+      // still one day, and the count is anchored to the calendar week rather
+      // than a rolling window that quietly decays as days age out.
+      return daysTrainedInWeek(history.map((h) => h.date));
     case 'streak':
       return computeStreak(history);
     default:
@@ -71,6 +71,7 @@ export function Goals() {
   const units = useStore((s) => s.settings.units);
   const addGoal = useStore((s) => s.addGoal);
   const removeGoal = useStore((s) => s.removeGoal);
+  const completeGoal = useStore((s) => s.completeGoal);
 
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<GoalType>('lift');
@@ -89,10 +90,22 @@ export function Goals() {
         const denom = g.target - base;
         const pct =
           denom !== 0 ? Math.max(0, Math.min(1, (current - base) / denom)) : current >= g.target ? 1 : 0;
-        return { goal: g, current, pct };
+        // A cut goal counts down, so "reached" follows the direction of travel.
+        const reached = denom < 0 ? current <= g.target : current >= g.target;
+        return { goal: g, current, pct, reached, done: Boolean(g.completedAt) || reached };
       }),
     [goals, history, prs, bodyWeight, units],
   );
+
+  // Latch newly-reached goals into the store so they stay achieved after the
+  // number that earned them moves on (a new week starts, body weight drifts).
+  useEffect(() => {
+    const fresh = rows.filter((r) => r.reached && !r.goal.completedAt);
+    if (fresh.length === 0) return;
+    fresh.forEach((r) => completeGoal(r.goal.id));
+    haptics.success();
+    sfxPop();
+  }, [rows, completeGoal]);
 
   const save = () => {
     const t = parseNum(target);
@@ -135,13 +148,20 @@ export function Goals() {
             </Button>
           </div>
           <div className="space-y-3.5">
-            {rows.map(({ goal, current, pct }) => (
+            {rows.map(({ goal, current, pct, done }) => (
               <div key={goal.id}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-medium text-[15px] truncate">{goal.label}</span>
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    {done && (
+                      <span className="w-4 h-4 rounded-full bg-accent text-accent-fg grid place-items-center shrink-0">
+                        <Check size={11} strokeWidth={3.5} />
+                      </span>
+                    )}
+                    <span className="font-medium text-[15px] truncate">{goal.label}</span>
+                  </span>
                   <span className="flex items-center gap-2 shrink-0">
                     <span className="text-[13px] text-fg-muted tabular">
-                      {current} / {goal.target} {suffix(goal)}
+                      {done ? 'Achieved' : `${current} / ${goal.target} ${suffix(goal)}`}
                     </span>
                     <button onClick={() => removeGoal(goal.id)} className="text-fg-subtle" aria-label="Remove goal">
                       <X size={14} />
@@ -150,8 +170,11 @@ export function Goals() {
                 </div>
                 <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-accent transition-[width] duration-500"
-                    style={{ width: `${Math.round(pct * 100)}%` }}
+                    className={cn(
+                      'h-full rounded-full transition-[width] duration-500',
+                      done ? 'bg-accent bg-accent-grad' : 'bg-accent',
+                    )}
+                    style={{ width: `${Math.round((done ? 1 : pct) * 100)}%` }}
                   />
                 </div>
               </div>

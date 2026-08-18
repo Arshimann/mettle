@@ -3,6 +3,7 @@ import { ThemeProvider } from './theme/ThemeProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppShell } from './app/AppShell';
 import { Onboarding } from './features/onboarding/Onboarding';
+import { PasswordReset } from './features/auth/PasswordReset';
 import { useStore } from './store/useStore';
 import { useAuth } from './store/useAuth';
 
@@ -15,7 +16,11 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <ErrorBoundary>{onboarded ? <AppShell /> : <Onboarding />}</ErrorBoundary>
+      <ErrorBoundary>
+        {onboarded ? <AppShell /> : <Onboarding />}
+        {/* Outside the shell so a reset link works mid-onboarding too. */}
+        <PasswordReset />
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }

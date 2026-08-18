@@ -22,12 +22,20 @@ interface AuthState {
   syncStatus: SyncStatus;
   lastSyncedAt: string | null;
   error: string | null;
+  /** True when the app was opened from a password-reset email — the UI must
+   *  ask for a new password before doing anything else. */
+  recovery: boolean;
 
   init: () => void;
   signUp: (email: string, password: string) => Promise<AuthActionResult>;
   signIn: (email: string, password: string) => Promise<AuthActionResult>;
   signOut: () => Promise<void>;
   syncNow: () => Promise<void>;
+  /** Email a reset link back to this app. */
+  resetPassword: (email: string) => Promise<AuthActionResult>;
+  /** Set a new password for the recovery session, then leave recovery mode. */
+  updatePassword: (password: string) => Promise<AuthActionResult>;
+  dismissRecovery: () => void;
 }
 
 const online = () => typeof navigator === 'undefined' || navigator.onLine;
@@ -43,11 +51,29 @@ export const useAuth = create<AuthState>((set, get) => ({
   syncStatus: isSupabaseConfigured ? 'idle' : 'unconfigured',
   lastSyncedAt: null,
   error: null,
+  recovery: false,
 
   init: () => {
     if (inited) return;
     inited = true;
     if (!supabase) return; // local-first build — nothing to wire up
+
+    // Password-reset links come back as a URL fragment. The client runs with
+    // detectSessionInUrl:false (it breaks inside an installed PWA), so the
+    // recovery token is claimed by hand here, then scrubbed from the address
+    // bar so a shared or bookmarked URL can't hand out a session.
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery')) {
+      const params = new URLSearchParams(hash.slice(1));
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      if (access_token && refresh_token) {
+        void supabase.auth
+          .setSession({ access_token, refresh_token })
+          .then(({ error }) => set(error ? { error: error.message } : { recovery: true }));
+      }
+    }
 
     // Reconcile + back up automatically after the user stops making changes.
     useStore.subscribe(() => {
@@ -75,6 +101,8 @@ export const useAuth = create<AuthState>((set, get) => ({
 
     // React to sign-in / sign-out / token refresh / the initial restored session.
     supabase.auth.onAuthStateChange((event, session) => {
+      // Supabase raises this on its own for recovery sessions in some flows.
+      if (event === 'PASSWORD_RECOVERY') set({ recovery: true });
       if (session?.user) {
         const userId = session.user.id;
         set({ status: 'signed-in', user: session.user, email: session.user.email ?? null });
@@ -123,8 +151,29 @@ export const useAuth = create<AuthState>((set, get) => ({
     if (pushTimer) clearTimeout(pushTimer);
     if (supabase) await supabase.auth.signOut();
     // Local data stays put — the app keeps working offline.
-    set({ status: 'signed-out', user: null, email: null, syncStatus: 'idle', lastSyncedAt: null });
+    set({ status: 'signed-out', user: null, email: null, syncStatus: 'idle', lastSyncedAt: null, recovery: false });
   },
+
+  resetPassword: async (email) => {
+    if (!supabase) return { ok: false, message: 'Cloud sync is not set up' };
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
+    });
+    if (error) return { ok: false, message: error.message };
+    // Deliberately the same reply whether or not that address has an account —
+    // otherwise this doubles as a "does X have a Mettle account" oracle.
+    return { ok: true, message: 'If that email has an account, a reset link is on its way.' };
+  },
+
+  updatePassword: async (password) => {
+    if (!supabase) return { ok: false, message: 'Cloud sync is not set up' };
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return { ok: false, message: error.message };
+    set({ recovery: false });
+    return { ok: true };
+  },
+
+  dismissRecovery: () => set({ recovery: false }),
 
   syncNow: async () => {
     const { configured, user } = get();

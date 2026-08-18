@@ -85,6 +85,8 @@ interface AppActions {
   // goals
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt'>) => void;
   removeGoal: (id: string) => void;
+  /** Latch a goal as reached. No-op once already complete. */
+  completeGoal: (id: string) => void;
   // supplements
   addSupplement: (s: Omit<Supplement, 'id'>) => void;
   removeSupplement: (id: string) => void;
@@ -328,6 +330,12 @@ export const useStore = create<Store>()(
       addGoal: (goal) =>
         set((s) => ({ goals: [...s.goals, { ...goal, id: uid(), createdAt: new Date().toISOString() }] })),
       removeGoal: (id) => set((s) => ({ goals: s.goals.filter((g) => g.id !== id) })),
+      completeGoal: (id) =>
+        set((s) => ({
+          goals: s.goals.map((g) =>
+            g.id === id && !g.completedAt ? { ...g, completedAt: new Date().toISOString() } : g,
+          ),
+        })),
 
       // ---- supplements ----
       addSupplement: (sup) => set((s) => ({ supplements: [...s.supplements, { ...sup, id: uid() }] })),

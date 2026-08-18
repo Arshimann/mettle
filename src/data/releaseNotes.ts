@@ -8,6 +8,19 @@ export interface ReleaseNote {
  *  "What's new" sheet after an update. */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '1.0.1',
+    date: '2026-08-18',
+    items: [
+      'Fixed the app getting clipped under the iPhone’s notch and Dynamic Island — the header now makes room for it properly.',
+      'The last card on a page no longer hides behind the floating nav bar.',
+      'Weekly goals actually complete now. They count the days you trained this week (Mon–Sun), two sessions in a day count as one day, and once you hit a goal it stays hit.',
+      'That little tapping sound on the settings cog and every toggle is gone. Sound is for finishing sets and workouts now.',
+      'Ending a workout offers a third option: end without saving.',
+      'Forgot your password? There’s a reset link on the login screen now.',
+      'The “Day cards” switch on the home screen works — it did nothing before.',
+    ],
+  },
+  {
     version: '1.0.0',
     date: '2026-07-23',
     items: [
