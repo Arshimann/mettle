@@ -25,9 +25,22 @@ function rosterFromChannel(ch: RealtimeChannel): Record<string, PresenceInfo> {
   return roster;
 }
 
+/** Someone in the roster just went from idle to training. */
+export interface PresenceDiff {
+  userId: string;
+}
+
+// A user can only raise one "started training" per this window, which covers
+// reconnects and the 2s re-track below.
+const STARTED_COOLDOWN_MS = 90 * 60_000;
+const lastStarted = new Map<string, number>();
+let prevRoster: Record<string, PresenceInfo> = {};
+let primed = false;
+
 export function joinPresence(
   userId: string,
   onRoster: (roster: Record<string, PresenceInfo>) => void,
+  onDiff?: (diffs: PresenceDiff[]) => void,
 ): void {
   if (!supabase || channel) return;
 
@@ -38,7 +51,32 @@ export function joinPresence(
     void ch.track({ training: Boolean(useStore.getState().activeSession), at: Date.now() });
   };
 
-  ch.on('presence', { event: 'sync' }, () => onRoster(rosterFromChannel(ch)));
+  ch.on('presence', { event: 'sync' }, () => {
+    const roster = rosterFromChannel(ch);
+    onRoster(roster);
+
+    // The first sync seeds the baseline and emits nothing — otherwise everyone
+    // already mid-workout when you open the app fires a notification.
+    if (!primed) {
+      prevRoster = roster;
+      primed = true;
+      return;
+    }
+
+    if (onDiff) {
+      const now = Date.now();
+      const started: PresenceDiff[] = [];
+      for (const [id, info] of Object.entries(roster)) {
+        if (id === userId || !info.training) continue;
+        if (prevRoster[id]?.training) continue; // already training — not a transition
+        if (now - (lastStarted.get(id) ?? 0) < STARTED_COOLDOWN_MS) continue;
+        lastStarted.set(id, now);
+        started.push({ userId: id });
+      }
+      if (started.length > 0) onDiff(started);
+    }
+    prevRoster = roster;
+  });
   ch.subscribe((status) => {
     if (status === 'SUBSCRIBED') track();
   });
@@ -59,6 +97,9 @@ export function leavePresence(): void {
   retrackTimer = null;
   unsubStore?.();
   unsubStore = null;
+  prevRoster = {};
+  primed = false;
+  lastStarted.clear();
   if (channel) {
     void channel.unsubscribe();
     channel = null;

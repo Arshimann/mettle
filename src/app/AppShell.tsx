@@ -9,6 +9,7 @@ import { useUI, type ScreenId } from '../store/useUI';
 import { SETTINGS_SECTIONS } from '../features/settings/sections';
 import { visibleNav } from './nav';
 import { BottomNav } from './BottomNav';
+import { NotificationBell } from '../features/notifications/NotificationBell';
 import { Screen } from './Screen';
 import { UpdatePrompt } from '../features/system/UpdatePrompt';
 import { WhatsNew } from '../features/system/WhatsNew';
@@ -94,7 +95,9 @@ function Header() {
         )}
 
         {!inSettings && (
-          <div className="relative">
+          <div className="flex items-center gap-0.5">
+            <NotificationBell />
+            <div className="relative">
             <motion.button
               onClick={() => {
                 haptics.tap();
@@ -144,6 +147,7 @@ function Header() {
                 </motion.div>
               </>
             )}
+            </div>
           </div>
         )}
       </div>
