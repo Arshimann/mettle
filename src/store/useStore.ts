@@ -17,6 +17,7 @@ import type {
   DisplayToggles,
   Goal,
   HistoryEntry,
+  PlaybookProgress,
   PR,
   Profile,
   SavedSplit,
@@ -41,6 +42,7 @@ interface AppData {
   supplements: Supplement[];
   supplementsTaken: { date: string | null; ids: string[] };
   achievements: { id: string; unlockedAt: string }[];
+  playbook: PlaybookProgress;
   customStretches: CustomStretch[];
   customRoutines: CustomRoutine[];
   customExercises: CustomExercise[];
@@ -96,6 +98,10 @@ interface AppActions {
 
   /** Attach why each stalled lift stalled to a saved workout. */
   setStallReasons: (entryId: string, reasons: Record<string, StallReason>) => void;
+  // playbook
+  markArticleRead: (id: string) => void;
+  skipAheadSection: (sectionId: string, level: number) => void;
+  setLastOpenedArticle: (id: string | null) => void;
   // supplements
   addSupplement: (s: Omit<Supplement, 'id'>) => void;
   removeSupplement: (id: string) => void;
@@ -155,6 +161,7 @@ const initialData: AppData = {
   supplements: [],
   supplementsTaken: { date: null, ids: [] },
   achievements: [],
+  playbook: { read: {}, unlocked: {}, lastOpened: null },
   customStretches: [],
   customRoutines: [],
   customExercises: [],
@@ -360,6 +367,22 @@ export const useStore = create<Store>()(
           ),
         })),
 
+      // ---- playbook ----
+      markArticleRead: (id) =>
+        set((s) =>
+          s.playbook.read[id]
+            ? {}
+            : { playbook: { ...s.playbook, read: { ...s.playbook.read, [id]: new Date().toISOString() } } },
+        ),
+      skipAheadSection: (sectionId, level) =>
+        set((s) => ({
+          playbook: {
+            ...s.playbook,
+            unlocked: { ...s.playbook.unlocked, [sectionId]: Math.max(level, s.playbook.unlocked[sectionId] ?? 1) },
+          },
+        })),
+      setLastOpenedArticle: (id) => set((s) => ({ playbook: { ...s.playbook, lastOpened: id } })),
+
       // ---- achievements ----
       unlockAchievements: (earnedIds) => {
         const known = new Set(get().achievements.map((a) => a.id));
@@ -419,6 +442,7 @@ export const useStore = create<Store>()(
           supplements: s.supplements,
           supplementsTaken: s.supplementsTaken,
           achievements: s.achievements,
+        playbook: s.playbook,
           customStretches: s.customStretches,
           customRoutines: s.customRoutines,
           customExercises: s.customExercises,
@@ -454,6 +478,7 @@ export const useStore = create<Store>()(
           supplements: [],
           supplementsTaken: { date: null, ids: [] },
           achievements: [],
+          playbook: { read: {}, unlocked: {}, lastOpened: null },
           customStretches: [],
           customRoutines: [],
           customExercises: [],
@@ -495,6 +520,14 @@ export const useStore = create<Store>()(
             display: { ...current.settings.display, ...(ps.display ?? {}) },
           },
           profile,
+          // Nested objects need the same explicit spread tabs/display get, or a
+          // persisted blob would replace the default wholesale.
+          playbook: {
+            ...current.playbook,
+            ...(p.playbook ?? {}),
+            read: { ...(p.playbook?.read ?? {}) },
+            unlocked: { ...(p.playbook?.unlocked ?? {}) },
+          },
         };
       },
       partialize: (s) => ({
@@ -509,6 +542,7 @@ export const useStore = create<Store>()(
         supplements: s.supplements,
         supplementsTaken: s.supplementsTaken,
         achievements: s.achievements,
+        playbook: s.playbook,
         customStretches: s.customStretches,
         customRoutines: s.customRoutines,
         customExercises: s.customExercises,

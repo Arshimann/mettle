@@ -42,6 +42,15 @@ export interface HistoryEntry {
 /** A plateau is either planned backing-off or accumulated fatigue. */
 export type StallReason = 'deload' | 'fatigue' | 'pushing';
 
+/** Playbook reading progress. Small enough to live in the main store. */
+export interface PlaybookProgress {
+  /** articleId → ISO date first completed. */
+  read: Record<string, string>;
+  /** sectionId → highest level unlocked by skipping ahead. */
+  unlocked: Record<string, number>;
+  lastOpened: string | null;
+}
+
 /** How a template or saved preset lands: swap the split, or add to it. */
 export type ApplyMode = 'replace' | 'append';
 
