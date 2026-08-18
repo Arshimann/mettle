@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import * as api from '../lib/physique';
 import type { PhysiquePost, PhysiqueReaction, PhysiqueVisibility } from '../lib/physique';
-import { useSocial } from './useSocial';
 
 /**
  * Physique board state. Not persisted — like useSocial, it's fetched fresh per
@@ -17,7 +16,7 @@ interface PhysiqueState {
   error: string | null;
 
   loadMine: (userId: string) => Promise<void>;
-  loadBoard: () => Promise<void>;
+  loadBoard: (friendIds: string[]) => Promise<void>;
   post: (
     userId: string,
     file: File,
@@ -47,8 +46,7 @@ export const usePhysique = create<PhysiqueState>((set, get) => ({
     });
   },
 
-  loadBoard: async () => {
-    const friendIds = useSocial.getState().friends.map((f) => f.userId);
+  loadBoard: async (friendIds) => {
     set({ loadingBoard: true });
     const res = await api.fetchBoard(friendIds);
     const posts = res.ok && res.data ? res.data : [];

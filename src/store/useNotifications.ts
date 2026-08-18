@@ -5,7 +5,6 @@ import {
   subscribeNotifications,
   type AppNotification,
 } from '../lib/notifications';
-import { useSocial } from './useSocial';
 
 /**
  * Notification state. Not persisted into the synced blob — the "seen" mark is
@@ -146,18 +145,24 @@ export const useNotifications = create<NotificationsState>((set, get) => ({
   },
 }));
 
-/** Called from the presence roster diff. Friends-only, hour-bucketed id. */
-export function notifyFriendTraining(friendId: string): void {
-  const f = useSocial.getState().friends.find((x) => x.userId === friendId);
-  if (!f) return; // presence:gym is global — only friends are worth telling you about
+/**
+ * Called from the presence roster diff. The caller resolves the friend and
+ * passes it in — this module deliberately doesn't import the social store, so
+ * there's no import cycle between the two.
+ */
+export function notifyFriendTraining(friend: {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+}): void {
   const hour = new Date().toISOString().slice(0, 13);
   useNotifications.getState().pushLocal({
-    id: `training:${friendId}:${hour}`,
+    id: `training:${friend.userId}:${hour}`,
     kind: 'friend-training',
     createdAt: new Date().toISOString(),
-    actorId: friendId,
-    actorName: f.displayName,
-    actorAvatar: f.avatarUrl,
+    actorId: friend.userId,
+    actorName: friend.displayName,
+    actorAvatar: friend.avatarUrl,
     read: false,
   });
 }

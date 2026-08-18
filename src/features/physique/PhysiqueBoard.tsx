@@ -119,9 +119,10 @@ export function PhysiqueBoard() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [commentsFor, setCommentsFor] = useState<string | null>(null);
 
+  const friendIds = friends.map((f) => f.userId).join(',');
   useEffect(() => {
-    void loadBoard();
-  }, [loadBoard, friends.length]);
+    void loadBoard(friendIds ? friendIds.split(',') : []);
+  }, [loadBoard, friendIds]);
 
   const urls = useSignedUrls(board.map((p) => p.path));
 

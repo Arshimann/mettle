@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Camera, GitCompareArrows, Lock, Trash2, Users } from 'lucide-react';
-import { Button, Card, CardLabel } from '../../components/ui';
+import { Button, Card, CardLabel, Sheet } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { prettyDate } from '../../lib/date';
@@ -24,13 +24,16 @@ export function MyPhysique() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [actionFor, setActionFor] = useState<string | null>(null);
+  const [confirmShare, setConfirmShare] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (userId) void loadMine(userId);
   }, [userId, loadMine]);
 
   const urls = useSignedUrls(myPosts.map((p) => p.thumbPath));
+  const actionPost = actionFor ? myPosts.find((p) => p.id === actionFor) : null;
   const comparePair = useMemo(
     () => (picked.length === 2 ? picked.map((id) => myPosts.find((p) => p.id === id)!).filter(Boolean) : null),
     [picked, myPosts],
@@ -83,7 +86,9 @@ export function MyPhysique() {
                           cur.includes(p.id) ? cur.filter((x) => x !== p.id) : [...cur, p.id].slice(-2),
                         );
                       } else {
-                        void setVisibility(p.id, p.visibility === 'private' ? 'friends' : 'private');
+                        // Never toggle visibility straight from a tap — a
+                        // mis-tap in a grid would publish a photo of your body.
+                        setActionFor(p.id);
                       }
                     }}
                     className={cn(
@@ -112,23 +117,8 @@ export function MyPhysique() {
             </div>
             {!selecting && (
               <p className="text-[11px] text-fg-subtle mb-3">
-                Tap a photo to switch it between private and shared with friends.
+                Tap a photo for sharing and delete options.
               </p>
-            )}
-            {confirmDelete && (
-              <Button
-                variant="danger"
-                fullWidth
-                size="sm"
-                className="mb-2.5"
-                onClick={() => {
-                  const p = myPosts.find((x) => x.id === confirmDelete);
-                  if (p) void remove(p);
-                  setConfirmDelete(null);
-                }}
-              >
-                <Trash2 size={14} /> Delete that check-in for good
-              </Button>
             )}
           </>
         )}
@@ -137,6 +127,94 @@ export function MyPhysique() {
           <Camera size={17} /> Add a check-in
         </Button>
       </Card>
+
+      {/* Per-photo actions. Sharing needs a second tap; deleting does too. */}
+      <Sheet
+        open={actionFor != null}
+        onClose={() => {
+          setActionFor(null);
+          setConfirmShare(false);
+          setConfirmDelete(false);
+        }}
+        title={actionPost ? prettyDate(actionPost.takenOn) : undefined}
+      >
+        {actionPost && (
+          <div className="space-y-2.5">
+            <Card className="flex items-start gap-2.5 p-3">
+              {actionPost.visibility === 'private' ? (
+                <>
+                  <Lock size={15} className="text-fg-subtle shrink-0 mt-0.5" />
+                  <p className="text-[13px] text-fg-muted leading-snug">
+                    Only you can see this photo.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Users size={15} className="text-accent shrink-0 mt-0.5" />
+                  <p className="text-[13px] text-fg-muted leading-snug">
+                    Shared — your friends can see this photo on the board.
+                  </p>
+                </>
+              )}
+            </Card>
+
+            {actionPost.visibility === 'private' ? (
+              <Button
+                variant={confirmShare ? 'danger' : 'outline'}
+                size="lg"
+                fullWidth
+                onClick={() => {
+                  if (!confirmShare) {
+                    setConfirmShare(true);
+                    haptics.warn();
+                    setTimeout(() => setConfirmShare(false), 4000);
+                    return;
+                  }
+                  void setVisibility(actionPost.id, 'friends');
+                  haptics.success();
+                  setActionFor(null);
+                  setConfirmShare(false);
+                }}
+              >
+                <Users size={16} />{' '}
+                {confirmShare ? 'Tap again — friends will see it' : 'Share with friends'}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="lg"
+                fullWidth
+                onClick={() => {
+                  void setVisibility(actionPost.id, 'private');
+                  haptics.success();
+                  setActionFor(null);
+                }}
+              >
+                <Lock size={16} /> Make it private again
+              </Button>
+            )}
+
+            <Button
+              variant="danger"
+              size="lg"
+              fullWidth
+              onClick={() => {
+                if (!confirmDelete) {
+                  setConfirmDelete(true);
+                  haptics.warn();
+                  setTimeout(() => setConfirmDelete(false), 4000);
+                  return;
+                }
+                void remove(actionPost);
+                setActionFor(null);
+                setConfirmDelete(false);
+              }}
+            >
+              <Trash2 size={16} /> {confirmDelete ? 'Tap again to delete for good' : 'Delete this check-in'}
+            </Button>
+          </div>
+        )}
+      </Sheet>
 
       <PhysiqueComposer open={composerOpen} onClose={() => setComposerOpen(false)} />
 

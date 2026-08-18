@@ -118,7 +118,12 @@ export const useSocial = create<SocialState>((set, get) => ({
     joinPresence(
       userId,
       (roster) => set({ presence: roster }),
-      (diffs) => diffs.forEach((d) => notifyFriendTraining(d.userId)),
+      (diffs) =>
+        diffs.forEach((d) => {
+          // presence:gym is global — only friends are worth telling you about.
+          const f = get().friends.find((x) => x.userId === d.userId);
+          if (f) notifyFriendTraining(f);
+        }),
     );
   },
 
