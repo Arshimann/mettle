@@ -8,6 +8,28 @@ export interface ReleaseNote {
  *  "What's new" sheet after an update. */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '1.1.0',
+    date: '2026-08-18',
+    items: [
+      'Insights can finally see individual muscles — not just “shoulders” but “your front delts get 3.5× the work your side delts do”, with the fix suggested and sized to the muscle. No more being told to bury your rear delts in volume.',
+      'The Playbook is a real thing now: six sections (Principles, Volume, Intensity, Rest, Recovery, Technique), each with levels that open up as you read, and any article can be read aloud to you.',
+      'Two straight answers you asked for: the actual science of getting taller (growth plates, why you shrink during the day, what posture can and can’t fix), and how to optimise your hormones without buying anything.',
+      'A physique board. Post check-in photos — private by default, always — and share the ones you want with friends, who can react and comment. Your own photos line up as a timeline you can compare side by side.',
+      'Build me a split: answer two questions and it reads your training history to find what you’ve been neglecting, then puts the fix on the right day.',
+      'Streaks now have rest days built in — two a week, Mon–Sun. Training 4× a week keeps your streak instead of breaking it.',
+      'Achievements actually unlock and stick now, and there are 41 of them across six categories instead of 10.',
+      'Progress: switch the chart between estimated 1RM and the weight you actually lifted, plus a Best lifts ranking.',
+      'Consistency has a weekly view — a tower per week against your goal — instead of only the day grid.',
+      'Templates no longer wipe your split: you choose Add or Replace. Plus single-day templates, an Aesthetics split, and your saved presets are finally reachable.',
+      'Edit a training day straight from the Train tab, and cardio now shows live pace and a best-bout record to chase.',
+      'Seven themes, including Editorial and Volt returning from the old days, any accent colour you like, and an optional heavy-metal font.',
+      'Recovery moved inside Stretch — same content, one less tab.',
+      'Home gains today’s lesson, a hand-picked video, friend activity, and 15 more facts. It’ll greet you by name if you set one.',
+      'When a lift stalls, the app asks whether it was a deload or fatigue instead of guessing.',
+      'New logo.',
+    ],
+  },
+  {
     version: '1.0.1',
     date: '2026-08-18',
     items: [
