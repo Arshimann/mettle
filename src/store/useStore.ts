@@ -154,6 +154,7 @@ const initialData: AppData = {
       didYouKnow: true,
       todaysLesson: true,
       dailyWatch: true,
+      friendActivity: true,
       upNext: true,
     },
   },

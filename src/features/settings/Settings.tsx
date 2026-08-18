@@ -45,6 +45,7 @@ const DISPLAY_LABELS: Record<keyof DisplayToggles, string> = {
   didYouKnow: 'Did you know',
   todaysLesson: "Today's lesson",
   dailyWatch: "Today's watch",
+  friendActivity: 'Friend activity',
 };
 
 function download(filename: string, text: string) {

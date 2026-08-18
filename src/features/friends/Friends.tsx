@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Copy, Flame, Loader2, UserPlus, Users, WifiOff, X } from 'lucide-react';
-import { Button, Card, CardLabel, EmptyState, PageHeader } from '../../components/ui';
+import { Button, Card, CardLabel, EmptyState, PageHeader, Segmented } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { sfxPop } from '../../lib/sound';
@@ -13,6 +13,7 @@ import { AuthPanel } from '../auth/AuthPanel';
 import { Avatar } from './Avatar';
 import { AddFriendSheet } from './AddFriendSheet';
 import { FriendProfile } from './FriendProfile';
+import { PhysiqueBoard } from '../physique/PhysiqueBoard';
 
 /** Presence dot: green = online, pulsing accent = mid-workout. */
 export function PresenceDot({ online, training }: { online: boolean; training: boolean }) {
@@ -98,6 +99,7 @@ export function Friends() {
   const friendParam = useUI((s) => s.params.friend) as string | undefined;
 
   const [addOpen, setAddOpen] = useState(false);
+  const [tab, setTab] = useState<'circle' | 'board'>('circle');
   const [copied, setCopied] = useState(false);
 
   const signedIn = status === 'signed-in';
@@ -192,6 +194,21 @@ export function Friends() {
         }
       />
 
+      <div className="mb-3.5">
+        <Segmented
+          fullWidth
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'circle' as const, label: 'Circle' },
+            { value: 'board' as const, label: 'Board' },
+          ]}
+        />
+      </div>
+
+      {tab === 'board' && <PhysiqueBoard />}
+
+      {tab === 'circle' && (
       <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3.5">
         {/* my share code */}
         <motion.div variants={listItem}>
@@ -312,6 +329,7 @@ export function Friends() {
           })
         )}
       </motion.div>
+      )}
 
       <AddFriendSheet open={addOpen} onClose={() => setAddOpen(false)} />
     </div>

@@ -9,6 +9,7 @@ import type {
 } from '../types/social';
 import * as social from '../lib/social';
 import { joinPresence, leavePresence, presenceJoined } from '../lib/presence';
+import { usePhysique } from './usePhysique';
 
 /**
  * Social state — NOT persisted. Fetched fresh per sign-in so offline devices
@@ -92,6 +93,7 @@ export const useSocial = create<SocialState>((set, get) => ({
 
   teardown: () => {
     leavePresence();
+    usePhysique.getState().teardown();
     set({
       userId: null,
       ready: false,

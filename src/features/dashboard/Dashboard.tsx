@@ -11,6 +11,7 @@ import { unitLabel } from '../../lib/units';
 import { DidYouKnow } from './DidYouKnow';
 import { TodaysLesson } from './TodaysLesson';
 import { DailyWatch } from './DailyWatch';
+import { FriendActivity } from './FriendActivity';
 
 /**
  * Time-of-day greeting, with the weekday folded in occasionally so it doesn't
@@ -269,6 +270,12 @@ export function Dashboard() {
               {Math.round(sessionVolume(last.exercises)).toLocaleString()} {unitLabel(units)} volume
             </p>
           </Card>
+        </motion.div>
+      )}
+
+      {display.friendActivity && (
+        <motion.div variants={listItem}>
+          <FriendActivity />
         </motion.div>
       )}
 

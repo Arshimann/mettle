@@ -144,6 +144,7 @@ export interface DisplayToggles {
   didYouKnow: boolean;
   todaysLesson: boolean;
   dailyWatch: boolean;
+  friendActivity: boolean;
   upNext: boolean;
 }
 
