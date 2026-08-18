@@ -11,6 +11,7 @@ import type { CustomRoutine, CustomStretch } from '../data/stretches';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import type {
   ActiveSession,
+  ApplyMode,
   BodyWeightEntry,
   CustomExercise,
   DisplayToggles,
@@ -66,11 +67,12 @@ interface AppActions {
   updateDay: (id: string, patch: Partial<Omit<SplitDay, 'id'>>) => void;
   removeDay: (id: string) => void;
   setDays: (days: SplitDay[]) => void;
-  applyTemplate: (days: { name: string; exercises: SplitExercise[] }[]) => void;
+  /** 'replace' swaps your whole split; 'append' keeps it and adds these days. */
+  applyTemplate: (days: { name: string; exercises: SplitExercise[] }[], mode?: ApplyMode) => void;
   // saved splits
   saveCurrentSplit: (name: string) => void;
   deleteSavedSplit: (id: string) => void;
-  applySavedSplit: (id: string) => void;
+  applySavedSplit: (id: string, mode?: ApplyMode) => void;
   // session
   startSession: (day: SplitDay) => void;
   updateSession: (updater: (s: ActiveSession) => ActiveSession) => void;
@@ -193,8 +195,11 @@ export const useStore = create<Store>()(
         set((s) => ({ split: s.split.map((d) => (d.id === id ? { ...d, ...patch } : d)) })),
       removeDay: (id) => set((s) => ({ split: s.split.filter((d) => d.id !== id) })),
       setDays: (days) => set({ split: days }),
-      applyTemplate: (days) =>
-        set({ split: days.map((d) => ({ id: uid(), name: d.name, exercises: d.exercises })) }),
+      applyTemplate: (days, mode = 'replace') =>
+        set((s) => {
+          const fresh = days.map((d) => ({ id: uid(), name: d.name, exercises: d.exercises }));
+          return { split: mode === 'append' ? [...s.split, ...fresh] : fresh };
+        }),
 
       // ---- saved splits ----
       saveCurrentSplit: (name) =>
@@ -210,11 +215,12 @@ export const useStore = create<Store>()(
           ],
         })),
       deleteSavedSplit: (id) => set((s) => ({ savedSplits: s.savedSplits.filter((x) => x.id !== id) })),
-      applySavedSplit: (id) =>
+      applySavedSplit: (id, mode = 'replace') =>
         set((s) => {
           const found = s.savedSplits.find((x) => x.id === id);
           if (!found) return {};
-          return { split: found.days.map((d) => ({ id: uid(), name: d.name, exercises: d.exercises })) };
+          const fresh = found.days.map((d) => ({ id: uid(), name: d.name, exercises: d.exercises }));
+          return { split: mode === 'append' ? [...s.split, ...fresh] : fresh };
         }),
 
       // ---- session ----

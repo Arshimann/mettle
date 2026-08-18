@@ -14,7 +14,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Dumbbell, GripVertical, LayoutGrid, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Bookmark, Dumbbell, GripVertical, LayoutGrid, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Button, Card, EmptyState, PageHeader, Sheet, Sortable, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { TemplateBrowser } from './TemplateBrowser';
@@ -30,11 +30,16 @@ export function Split() {
   const updateDay = useStore((s) => s.updateDay);
   const removeDay = useStore((s) => s.removeDay);
   const setDays = useStore((s) => s.setDays);
+  const savedSplits = useStore((s) => s.savedSplits);
+
+  const saveCurrentSplit = useStore((s) => s.saveCurrentSplit);
 
   const [pickerForDay, setPickerForDay] = useState<string | null>(null);
   const [nameSheet, setNameSheet] = useState<{ id: string | null; value: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [presetName, setPresetName] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const [targetSheet, setTargetSheet] = useState<{ dayId: string; idx: number; name: string; sets: string; reps: string } | null>(null);
 
   const sensors = useSensors(
@@ -95,6 +100,16 @@ export function Split() {
     });
   };
 
+  const savePreset = () => {
+    const name = (presetName ?? '').trim();
+    if (!name) return;
+    saveCurrentSplit(name);
+    haptics.success();
+    setPresetName(null);
+    setToast(`Saved “${name}”`);
+    setTimeout(() => setToast(null), 2400);
+  };
+
   const removeExercise = (dayId: string, idx: number) => {
     const day = dayOf(dayId);
     if (!day) return;
@@ -109,6 +124,18 @@ export function Split() {
         subtitle={split.length ? `${split.length} day${split.length === 1 ? '' : 's'}` : 'Your training days'}
         action={
           <div className="flex items-center gap-2">
+            {split.length > 0 && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  haptics.tap();
+                  setPresetName(`My split ${savedSplits.length + 1}`);
+                }}
+                aria-label="Save split as preset"
+              >
+                <Bookmark size={15} /> Save
+              </Button>
+            )}
             <Button size="sm" onClick={() => { haptics.tap(); setTemplatesOpen(true); }}>
               <LayoutGrid size={15} /> Templates
             </Button>
@@ -302,6 +329,35 @@ export function Split() {
           </div>
         )}
       </Sheet>
+
+      {/* Snapshot the current split so you can come back to it later. */}
+      <Sheet open={presetName !== null} onClose={() => setPresetName(null)} title="Save as preset">
+        <p className="text-sm text-fg-muted leading-relaxed -mt-1 mb-3.5">
+          Keeps a copy of these {split.length} day{split.length === 1 ? '' : 's'} you can reload any time from
+          Templates → Saved. Your current split stays exactly as it is.
+        </p>
+        <input
+          autoFocus
+          value={presetName ?? ''}
+          onChange={(e) => setPresetName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') savePreset();
+          }}
+          placeholder="Preset name"
+          maxLength={40}
+          aria-label="Preset name"
+          className="w-full h-12 px-3.5 rounded-btn bg-surface-2 border border-border text-[15px] outline-none focus:border-border-strong mb-3"
+        />
+        <Button variant="accent" size="lg" fullWidth disabled={!presetName?.trim()} onClick={savePreset}>
+          Save preset
+        </Button>
+      </Sheet>
+
+      {toast && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-[110px] z-50 bg-fg text-canvas text-sm font-medium px-4 py-2.5 rounded-btn shadow-pop">
+          {toast}
+        </div>
+      )}
 
       <Sheet open={!!nameSheet} onClose={() => setNameSheet(null)} title={nameSheet?.id ? 'Rename day' : 'New day'}>
         <input

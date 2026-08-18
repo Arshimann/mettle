@@ -50,6 +50,18 @@ export function toKm(display: string | number, units: Units): number {
 }
 
 /** Canonical km → display-unit distance. */
+/** Pace as m:ss per km/mi. Null when either half is missing or zero — a pace
+ *  needs both numbers, and "0:00/km" reads like a broken readout. */
+export function paceLabel(minutes: number, km: number, units: Units): string | null {
+  if (!minutes || !km || minutes <= 0 || km <= 0) return null;
+  const perUnit = minutes / fromKm(km, units);
+  if (!isFinite(perUnit) || perUnit <= 0) return null;
+  const m = Math.floor(perUnit);
+  const s = Math.round((perUnit - m) * 60);
+  const carry = s === 60;
+  return `${m + (carry ? 1 : 0)}:${String(carry ? 0 : s).padStart(2, '0')}/${distanceLabel(units)}`;
+}
+
 export function fromKm(km: number, units: Units): number {
   if (km == null || isNaN(km)) return 0;
   return units === 'lbs' ? Math.round(km * MI_PER_KM * 100) / 100 : Math.round(km * 100) / 100;

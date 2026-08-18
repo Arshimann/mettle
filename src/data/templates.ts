@@ -446,4 +446,64 @@ export const TEMPLATES: Template[] = [
       },
     ],
   },
+  {
+    id: 'aesthetics',
+    name: 'Aesthetics',
+    desc: 'Built for the look: wide delts, upper chest, back width, and arms. Volume goes where the eye goes.',
+    cadence: '4–5 days',
+    category: 'Physique',
+    days: [
+      {
+        name: 'Delts & Arms',
+        exercises: [
+          e('Overhead Press', 4, '6–10'),
+          e('Lateral Raise', 5, '12–20'),
+          e('Rear Delt Fly', 4, '12–20'),
+          e('Preacher Curl', 3, '10–14'),
+          e('Overhead Triceps Extension', 3, '10–14'),
+          e('Hammer Curl', 3, '10–14'),
+        ],
+      },
+      {
+        name: 'Back width',
+        exercises: [
+          e('Pull-Up', 4, '6–12'),
+          e('Lat Pulldown', 3, '10–14'),
+          e('Chest-Supported Row', 3, '10–14'),
+          e('Straight-Arm Pulldown', 3, '12–15'),
+          e('Face Pull', 4, '15–20'),
+        ],
+      },
+      {
+        name: 'Upper chest',
+        exercises: [
+          e('Incline Bench Press', 4, '6–10'),
+          e('Incline Dumbbell Press', 3, '8–12'),
+          e('Cable Crossover', 3, '12–15'),
+          e('Lateral Raise', 3, '12–20'),
+          e('Triceps Pushdown', 3, '10–15'),
+        ],
+      },
+      {
+        name: 'Legs (lean)',
+        exercises: [
+          e('Squat', 4, '6–10'),
+          e('Romanian Deadlift', 3, '8–12'),
+          e('Leg Extension', 3, '12–15'),
+          e('Standing Calf Raise', 4, '10–15'),
+          e('Hanging Leg Raise', 3, '10–15'),
+        ],
+      },
+      {
+        name: 'Shoulders & abs',
+        exercises: [
+          e('Arnold Press', 4, '8–12'),
+          e('Cable Lateral Raise', 4, '12–20'),
+          e('Upright Row', 3, '10–14'),
+          e('Cable Crunch', 3, '12–15'),
+          e('Russian Twist', 3, '20–30'),
+        ],
+      },
+    ],
+  },
 ];

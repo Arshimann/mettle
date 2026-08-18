@@ -34,6 +34,9 @@ export interface HistoryEntry {
   durationSec?: number;
 }
 
+/** How a template or saved preset lands: swap the split, or add to it. */
+export type ApplyMode = 'replace' | 'append';
+
 export interface SplitExercise {
   name: string;
   targetSets?: number;
