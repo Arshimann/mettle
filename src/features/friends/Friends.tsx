@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Copy, Flame, Loader2, UserPlus, Users, WifiOff, X } from 'lucide-react';
+import { Check, Copy, Flame, Loader2, Pencil, UserPlus, Users, WifiOff, X } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, PageHeader, Segmented } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
@@ -226,6 +226,18 @@ export function Friends() {
               className="w-9 h-9 grid place-items-center rounded-btn bg-surface-2 text-fg-muted"
             >
               {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
+            </button>
+            {/* Same editor as Settings → Friends & privacy, reachable from
+                where you actually think about your profile. */}
+            <button
+              onClick={() => {
+                haptics.tap();
+                navigate('settings', { section: 'social' });
+              }}
+              aria-label="Edit account"
+              className="w-9 h-9 grid place-items-center rounded-btn bg-surface-2 text-fg-muted"
+            >
+              <Pencil size={15} />
             </button>
           </Card>
         </motion.div>
