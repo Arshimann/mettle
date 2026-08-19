@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Mettle — fixes found in first real use. Run AFTER 0006_notifications.sql.
 --
--- Three things, all of which caused visible failures in production:
+-- Four things, three of which caused visible failures in production:
 --   1. Avatar upload died with "new row violates row-level security policy",
 --      because 0004 gave the avatars bucket insert/update/delete policies but
 --      no SELECT — and upsert has to read the existing object first.
@@ -64,8 +64,12 @@ create policy tts_update on storage.objects for update to authenticated
 --    deliberately returns only display_name and avatar_url, and only for people
 --    already in a request relationship with the caller — it is not a directory.
 -- ---------------------------------------------------------------------------
+--    Output columns are deliberately named differently from the columns they
+--    select. In a SQL-bodied function the RETURNS TABLE names are in scope and
+--    can collide with same-named columns; distinct names remove that risk
+--    outright rather than relying on qualification.
 create or replace function public.pending_request_profiles()
-returns table (user_id uuid, display_name text, avatar_url text)
+returns table (uid uuid, name text, avatar text)
 language sql stable security definer set search_path = public as $$
   select sp.user_id, sp.display_name, sp.avatar_url
   from shared_profiles sp

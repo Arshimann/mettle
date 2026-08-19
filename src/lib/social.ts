@@ -324,9 +324,11 @@ export async function fetchRequests(
     // security-definer and returns name + avatar only for people already in a
     // request relationship with us.
     const { data: pending } = await supabase.rpc('pending_request_profiles');
-    type P = { user_id: string; display_name: string | null; avatar_url: string | null };
+    // Columns are uid/name/avatar — deliberately distinct from the underlying
+    // ones so the SQL function can't hit a name collision.
+    type P = { uid: string; name: string | null; avatar: string | null };
     for (const p of (pending ?? []) as P[]) {
-      if (p.display_name) names.set(p.user_id, { displayName: p.display_name, avatarUrl: p.avatar_url });
+      if (p.name) names.set(p.uid, { displayName: p.name, avatarUrl: p.avatar });
     }
 
     // Friends we can already read directly — covers anyone the RPC missed.

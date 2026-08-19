@@ -12,11 +12,9 @@
 [functions]
   node_bundler = "esbuild"
 
-# Keep function routes ahead of the SPA fallback so they aren't rewritten.
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+# No rule is needed to protect /.netlify/functions/* from the SPA fallback —
+# Netlify routes function paths before user redirects are applied. An explicit
+# passthrough rule points at itself and is rejected as circular.
 
 # SPA fallback so deep links resolve to the app shell.
 [[redirects]]
