@@ -133,6 +133,8 @@ const initialData: AppData = {
     accent: null,
     displayFont: 'default',
     displayFontScope: 'wordmark',
+    speechVoiceId: null,
+    speechRate: 1,
     units: 'kg',
     onboarded: false,
     preferredRest: 120,

@@ -9,3 +9,4 @@ export { Sheet } from './Sheet';
 export { Stepper } from './Stepper';
 export { CountUp } from './CountUp';
 export { Sortable } from './Sortable';
+export { Pressable, PressableCard } from './Pressable';

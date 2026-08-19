@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, CardLabel, Segmented } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { prettyDate } from '../../lib/date';
+import { haptics } from '../../lib/haptics';
+import { sfxAchievement } from '../../lib/sound';
 import { buildAchievementStats } from '../../lib/achievementStats';
 import { useStore } from '../../store/useStore';
 import { useSocial } from '../../store/useSocial';
@@ -33,7 +35,12 @@ export function Achievements() {
   // Record anything newly earned so it keeps its unlock date, even if the
   // underlying number later drops (a streak breaks, a friend is removed).
   useEffect(() => {
-    unlockAchievements(earnedIds);
+    const fresh = unlockAchievements(earnedIds);
+    // Only celebrate genuinely new ones — this effect re-runs on every stats change.
+    if (fresh.length > 0) {
+      haptics.success();
+      sfxAchievement();
+    }
   }, [earnedIds, unlockAchievements]);
 
   const unlockedAt = useMemo(

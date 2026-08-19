@@ -1,10 +1,21 @@
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { spring } from '../../theme/motion';
 import { useUI } from '../../store/useUI';
 
-/** Bottom sheet with slide-in/out. Backdrop click closes. */
+/**
+ * Bottom sheet with slide-in/out. Backdrop click closes.
+ *
+ * Rendered through a portal to <body>, and that is load-bearing: `filter`,
+ * `backdrop-filter` and `transform` all create a containing block for
+ * `position: fixed` descendants. The app header uses `backdrop-blur-xl`, so a
+ * sheet opened from inside it (the notification bell) had its full-screen
+ * backdrop clamped to the 56px header — covering the header, swallowing every
+ * tap on it, and dropping the panel at the wrong place. The portal moves the
+ * sheet out of any such ancestor for good.
+ */
 export function Sheet({
   open,
   onClose,
@@ -25,7 +36,9 @@ export function Sheet({
     return () => popOverlay();
   }, [open, pushOverlay, popOverlay]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && [
         <motion.div
@@ -62,6 +75,7 @@ export function Sheet({
           <div className="overflow-y-auto no-scrollbar px-5 pb-6">{children}</div>
         </motion.div>,
       ]}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

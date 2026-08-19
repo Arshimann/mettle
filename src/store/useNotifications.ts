@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { sfxNotify } from '../lib/sound';
 import {
   fetchNotificationsSince,
   subscribeNotifications,
@@ -123,7 +124,11 @@ export const useNotifications = create<NotificationsState>((set, get) => ({
       const items = [...byId.values()]
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .slice(0, 50);
-      return { items, unread: items.filter((n) => !n.read).length, loading: false };
+      const unread = items.filter((n) => !n.read).length;
+      // Chime only when something genuinely new arrived — never on a refresh
+      // that merely re-reads what was already there.
+      if (unread > s.unread) sfxNotify();
+      return { items, unread, loading: false };
     });
   },
 
@@ -140,6 +145,7 @@ export const useNotifications = create<NotificationsState>((set, get) => ({
     set((s) => {
       if (s.items.some((x) => x.id === n.id)) return s;
       const items = [n, ...s.items].slice(0, 50);
+      sfxNotify();
       return { items, unread: items.filter((x) => !x.read).length };
     });
   },

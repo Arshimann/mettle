@@ -3,6 +3,18 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
+
+# Serverless functions. tts.ts proxies ElevenLabs so the API key never reaches
+# the client bundle. Set ELEVENLABS_API_KEY in Site settings → Environment
+# variables; without it the function returns 503 and the app falls back to the
+# browser's built-in voice.
+[functions]
+  node_bundler = "esbuild"
+
+# No rule is needed to protect /.netlify/functions/* from the SPA fallback —
+# Netlify routes function paths before user redirects are applied. An explicit
+# passthrough rule points at itself and is rejected as circular.
 
 # SPA fallback so deep links resolve to the app shell.
 [[redirects]]
