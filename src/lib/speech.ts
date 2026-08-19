@@ -18,6 +18,38 @@ export interface SpeechVoice {
   id: string;
   label: string;
   lang: string;
+  /** Higher is better. Drives the default pick and the picker's order. */
+  score: number;
+}
+
+/**
+ * Ranks the voices a device offers. Platforms ship a wide quality range under
+ * one API — iOS "Compact" voices are the tinny ones people mean by "robotic",
+ * while Enhanced/Premium/Neural variants sound markedly better and are usually
+ * present but never chosen by default. Picking well is the single biggest
+ * quality lever available without a paid service.
+ */
+function scoreVoice(v: SpeechSynthesisVoice, prefLang: string): number {
+  const name = v.name.toLowerCase();
+  let score = 0;
+
+  // Language match first — a great voice in the wrong language is useless.
+  if (v.lang.toLowerCase().startsWith(prefLang)) score += 100;
+  else if (v.lang.toLowerCase().startsWith(prefLang.slice(0, 2))) score += 60;
+
+  // Quality tiers, by the naming conventions the platforms actually use.
+  if (/premium|enhanced|neural|natural/.test(name)) score += 40;
+  if (/siri/.test(name)) score += 30;
+  if (/google/.test(name)) score += 25;
+  // iOS "Compact" voices are the low-bandwidth ones — actively avoid them.
+  if (/compact/.test(name)) score -= 40;
+  if (/eloquence|novelty|whisper|bells|bubbles|organ|zarvox|trinoids/.test(name)) score -= 60;
+
+  // Local voices don't stall waiting on a network round trip.
+  if (v.localService) score += 10;
+  if (v.default) score += 5;
+
+  return score;
 }
 
 export interface SpeechSnapshot {
@@ -83,9 +115,20 @@ function speakFrom(i: number, voiceId: string | null, rate: number) {
   index = i;
   const u = new SpeechSynthesisUtterance(queue[i]);
   u.rate = rate;
-  if (voiceId && voiceCache) {
-    const v = voiceCache.find((x) => x.voiceURI === voiceId);
-    if (v) u.voice = v;
+  // A hair above neutral. The dead-flat default pitch is a large part of why
+  // stock TTS reads as robotic.
+  u.pitch = 1.05;
+  // No explicit choice means take the best one available rather than whatever
+  // the platform happens to default to — often a low-bandwidth "Compact" voice.
+  const wanted = voiceId ?? bestVoiceId();
+  if (wanted && voiceCache) {
+    const v = voiceCache.find((x) => x.voiceURI === wanted);
+    if (v) {
+      u.voice = v;
+      // Match the utterance language to the voice, or the engine can layer a
+      // mismatched accent on top of it.
+      u.lang = v.lang;
+    }
   }
   u.onend = () => {
     if (mine !== token) return; // cancelled — don't resurrect the queue
@@ -107,7 +150,7 @@ export const speech = {
   /** Resolves once voices exist, or after a short deadline. Cached. */
   async listVoices(): Promise<SpeechVoice[]> {
     if (!synth) return [];
-    if (voiceCache?.length) return voiceCache.map(toVoice);
+    if (voiceCache?.length) return voiceCache.map(toVoice).sort((a, b) => b.score - a.score);
     voiceCache = synth.getVoices();
     if (voiceCache.length === 0) {
       await new Promise<void>((resolve) => {
@@ -170,11 +213,20 @@ export const speech = {
   getSnapshot: snapshot,
 };
 
+const prefLang = () => (typeof navigator !== 'undefined' ? navigator.language : 'en-US').toLowerCase();
+
 const toVoice = (v: SpeechSynthesisVoice): SpeechVoice => ({
   id: v.voiceURI,
   label: v.name,
   lang: v.lang,
+  score: scoreVoice(v, prefLang()),
 });
+
+/** The best voice this device offers, or null before any have loaded. */
+export function bestVoiceId(): string | null {
+  if (!voiceCache?.length) return null;
+  return [...voiceCache].map(toVoice).sort((a, b) => b.score - a.score)[0]?.id ?? null;
+}
 
 // Speech keeps going when a PWA is backgrounded on iOS — stop it instead.
 if (typeof window !== 'undefined' && synth) {

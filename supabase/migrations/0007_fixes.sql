@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Mettle — fixes found in first real use. Run AFTER 0006_notifications.sql.
 --
--- Four things, three of which caused visible failures in production:
+-- Three things, all of which caused visible failures in production:
 --   1. Avatar upload died with "new row violates row-level security policy",
 --      because 0004 gave the avatars bucket insert/update/delete policies but
 --      no SELECT — and upsert has to read the existing object first.
@@ -33,32 +33,7 @@ update storage.buckets
  where id = 'physique';
 
 -- ---------------------------------------------------------------------------
--- 3. Narration cache. Generated speech is stored here keyed by a hash of the
---    text, so a Playbook article is synthesised once and then served from
---    storage — without this every play would bill ElevenLabs characters again.
---
---    Readable by any signed-in user (it's app content, identical for everyone),
---    writable by signed-in users so the first person to play an article fills
---    the cache for the rest.
--- ---------------------------------------------------------------------------
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('tts', 'tts', false, 10485760, array['audio/mpeg'])
-on conflict (id) do nothing;
-
-drop policy if exists tts_select on storage.objects;
-create policy tts_select on storage.objects for select to authenticated
-  using (bucket_id = 'tts');
-
-drop policy if exists tts_insert on storage.objects;
-create policy tts_insert on storage.objects for insert to authenticated
-  with check (bucket_id = 'tts');
-
-drop policy if exists tts_update on storage.objects;
-create policy tts_update on storage.objects for update to authenticated
-  using (bucket_id = 'tts') with check (bucket_id = 'tts');
-
--- ---------------------------------------------------------------------------
--- 4. Let each side of a PENDING friend request see the other's name and photo.
+-- 3. Let each side of a PENDING friend request see the other's name and photo.
 --
 --    Security definer for the same anti-recursion reason as is_friend(). It
 --    deliberately returns only display_name and avatar_url, and only for people

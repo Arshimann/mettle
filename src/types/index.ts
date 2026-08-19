@@ -166,6 +166,9 @@ export interface Settings {
   accent: string | null;
   displayFont: DisplayFont;
   displayFontScope: FontScope;
+  /** Remembered read-aloud voice and speed. */
+  speechVoiceId: string | null;
+  speechRate: number;
   units: Units;
   onboarded: boolean;
   preferredRest: number; // seconds
