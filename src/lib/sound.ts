@@ -135,6 +135,42 @@ export const sfxFanfare = () =>
     600,
   );
 
+/** Rising two-note swell as a session opens — the "here we go" cue. */
+export const sfxSessionStart = () =>
+  fx(
+    'sessionStart',
+    () => {
+      note(392, 0, 0.18, 0.09, 'triangle');
+      note(587, 0.1, 0.26, 0.1, 'triangle');
+      note(784, 0.2, 0.3, 0.07);
+    },
+    600,
+  );
+
+/** Warm three-note chime when an achievement unlocks. */
+export const sfxAchievement = () =>
+  fx(
+    'achievement',
+    () => {
+      [659, 880, 1319].forEach((f, i) => note(f, i * 0.08, 0.3, 0.11, 'triangle'));
+    },
+    800,
+  );
+
+/** Soft double-tap for an arriving notification. Quiet on purpose. */
+export const sfxNotify = () =>
+  fx(
+    'notify',
+    () => {
+      note(1046, 0, 0.07, 0.045, 'triangle');
+      note(1318, 0.08, 0.1, 0.04, 'triangle');
+    },
+    1500,
+  );
+
+/** Low tick for the last seconds of a rest countdown. */
+export const sfxCountdownTick = () => fx('countdown', () => note(520, 0, 0.05, 0.045, 'triangle'), 400);
+
 /** High glittery blips layered under the fireworks. */
 export const sfxSparkle = () =>
   fx(

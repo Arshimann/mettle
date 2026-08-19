@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Calculator, Check, Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Button, Card, CardLabel, EmptyState, PageHeader, Sheet, Stepper } from '../../components/ui';
+import { Award, Calculator, Check, ChevronRight, Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Button, Card, CardLabel, EmptyState, PageHeader, PressableCard, Sheet, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { EditDaySheet } from './EditDaySheet';
 import { StallPrompt } from './StallPrompt';
+import { SessionIntro } from './SessionIntro';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { listContainer, listItem, revealBlur } from '../../theme/motion';
@@ -144,6 +145,22 @@ export function Train() {
   const [confirmEndDiscard, setConfirmEndDiscard] = useState(false);
   const [editDayId, setEditDayId] = useState<string | null>(null);
   const [pendingStalls, setPendingStalls] = useState<{ entryId: string; names: string[] } | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [intro, setIntro] = useState<string | null>(null);
+
+  // Long-press opens the day editor without needing edit mode first.
+  const longPress = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const armLongPress = (dayId: string) => {
+    cancelLongPress();
+    longPress.current = setTimeout(() => {
+      haptics.warn();
+      setEditDayId(dayId);
+    }, 500);
+  };
+  const cancelLongPress = () => {
+    if (longPress.current) clearTimeout(longPress.current);
+    longPress.current = null;
+  };
   const [tools, setTools] = useState<{ ei: number; name: string; target: number } | null>(null);
   const [flashReps, setFlashReps] = useState<{ ei: number; si: number } | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -191,11 +208,33 @@ export function Train() {
     );
   }
 
+  // ---- the moment between tapping Start and the logger ----
+  if (intro) {
+    return <SessionIntro dayName={intro} onDone={() => setIntro(null)} />;
+  }
+
   // ---- no active session: pick a day to start ----
   if (!session) {
     return (
       <div>
-        <PageHeader title="Train" subtitle="Start a session" />
+        <PageHeader
+          title="Train"
+          subtitle={editing ? 'Tap a day to edit it' : 'Start a session'}
+          action={
+            split.length > 0 ? (
+              <Button
+                size="sm"
+                variant={editing ? 'accent' : 'outline'}
+                onClick={() => {
+                  haptics.tap();
+                  setEditing((v) => !v);
+                }}
+              >
+                {editing ? 'Done' : 'Edit'}
+              </Button>
+            ) : undefined
+          }
+        />
         {split.length === 0 ? (
           <Card className="p-0">
             <EmptyState
@@ -213,31 +252,58 @@ export function Train() {
           <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3">
             {split.map((day) => (
               <motion.div key={day.id} variants={listItem}>
-                <Card className="flex items-center gap-3 p-4">
-                  <div className="w-10 h-10 rounded-btn bg-accent-soft grid place-items-center text-accent shrink-0">
-                    <Dumbbell size={18} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold truncate">{day.name}</div>
-                    <div className="text-xs text-fg-muted truncate">
-                      {day.exercises.length} exercise{day.exercises.length === 1 ? '' : 's'}
-                    </div>
-                  </div>
-                  {/* Tweak the day right here — no round trip to the Split tab. */}
-                  <button
-                    onClick={() => {
-                      haptics.tap();
-                      setEditDayId(day.id);
-                    }}
-                    className="w-9 h-9 grid place-items-center rounded-btn text-fg-subtle shrink-0"
-                    aria-label={`Edit ${day.name}`}
+                {/* One card, two modes. In edit mode the whole row is the
+                    target; otherwise a long-press gets you there without the
+                    permanent pencil cluttering every row. */}
+                <PressableCard
+                  onPointerDown={() => !editing && armLongPress(day.id)}
+                  onPointerUp={cancelLongPress}
+                  onPointerLeave={cancelLongPress}
+                  onClick={() => {
+                    if (!editing) return;
+                    haptics.tap();
+                    setEditDayId(day.id);
+                  }}
+                >
+                  <Card
+                    className={cn(
+                      'flex items-center gap-3 p-4 transition-colors',
+                      editing && 'border-accent/50 bg-accent-soft/30',
+                    )}
                   >
-                    <Pencil size={16} />
-                  </button>
-                  <Button size="sm" variant="accent" onClick={() => startSession(day)}>
-                    Start
-                  </Button>
-                </Card>
+                    <motion.div
+                      animate={editing ? { rotate: [0, -2.5, 2.5, 0] } : { rotate: 0 }}
+                      transition={editing ? { repeat: Infinity, duration: 0.55, ease: 'easeInOut' } : undefined}
+                      className="w-10 h-10 rounded-btn bg-accent-soft grid place-items-center text-accent shrink-0"
+                    >
+                      {editing ? <Pencil size={17} /> : <Dumbbell size={18} />}
+                    </motion.div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold truncate">{day.name}</div>
+                      <div className="text-xs text-fg-muted truncate">
+                        {day.exercises.length} exercise{day.exercises.length === 1 ? '' : 's'}
+                      </div>
+                    </div>
+                    {editing ? (
+                      <ChevronRight size={18} className="text-accent shrink-0" />
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="accent"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          cancelLongPress();
+                          haptics.success();
+                          // The intro takes over while the session spins up.
+                          setIntro(day.name);
+                          startSession(day);
+                        }}
+                      >
+                        Start
+                      </Button>
+                    )}
+                  </Card>
+                </PressableCard>
               </motion.div>
             ))}
           </motion.div>
@@ -249,7 +315,9 @@ export function Train() {
   }
 
   // ---- active session: the logger (session is non-null here) ----
-  const elapsed = fmtDuration(Math.floor((nowTick - session.startedAt) / 1000));
+  // Clamped at zero: nowTick is captured at mount, so a session started a
+  // moment later would briefly read negative.
+  const elapsed = fmtDuration(Math.max(0, Math.floor((nowTick - session.startedAt) / 1000)));
 
   const patchSet = (
     ei: number,
