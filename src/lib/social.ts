@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { deleteAllPosts } from './physique';
+import { encodeImage } from './imageEncode';
 import { useStore } from '../store/useStore';
 import { computeStreak } from './formulas';
 import { todayStr, addDays, fromISO, toISO } from './date';
@@ -318,15 +319,26 @@ export async function fetchRequests(
   const otherIds = [...new Set(reqs.map((r) => (r.from_id === userId ? r.to_id : r.from_id)))];
   const names = new Map<string, { displayName: string; avatarUrl: string | null }>();
   if (otherIds.length > 0) {
-    // search-less lookup: request parties may not be friends yet, so go through
-    // the RPC-free path — shared_profiles select is blocked for non-friends,
-    // which is fine: fall back to "Lifter" when the row is unreadable.
-    const { data: profiles } = await supabase
-      .from('shared_profiles')
-      .select('user_id, display_name, avatar_url')
-      .in('user_id', otherIds);
-    for (const p of (profiles ?? []) as SharedProfileRow[]) {
-      names.set(p.user_id, { displayName: p.display_name ?? 'Lifter', avatarUrl: p.avatar_url });
+    // A pending requester isn't a friend yet, so sp_select won't let us read
+    // their row — which is why requests used to show "Lifter". This RPC is
+    // security-definer and returns name + avatar only for people already in a
+    // request relationship with us.
+    const { data: pending } = await supabase.rpc('pending_request_profiles');
+    type P = { user_id: string; display_name: string | null; avatar_url: string | null };
+    for (const p of (pending ?? []) as P[]) {
+      if (p.display_name) names.set(p.user_id, { displayName: p.display_name, avatarUrl: p.avatar_url });
+    }
+
+    // Friends we can already read directly — covers anyone the RPC missed.
+    const missing = otherIds.filter((id) => !names.has(id));
+    if (missing.length > 0) {
+      const { data: profiles } = await supabase
+        .from('shared_profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', missing);
+      for (const p of (profiles ?? []) as SharedProfileRow[]) {
+        names.set(p.user_id, { displayName: p.display_name ?? 'Lifter', avatarUrl: p.avatar_url });
+      }
     }
   }
   const decorate = (r: ReqRow): FriendRequestRow => {
@@ -547,39 +559,21 @@ export async function deleteComment(commentId: string): Promise<SocialResult> {
 /** Crop-center + resize to 256×256, webp (jpeg fallback), then upload. */
 export async function uploadAvatar(userId: string, file: File): Promise<SocialResult<string>> {
   if (!supabase) return noClient;
-  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
-    return { ok: false, message: 'Pick a JPG, PNG, or WebP image' };
+  // Accept anything the browser calls an image, including HEIC straight off an
+  // iPhone camera — it gets re-encoded below regardless of what came in.
+  if (!file.type.startsWith('image/')) {
+    return { ok: false, message: 'Pick an image' };
   }
 
-  let bitmap: ImageBitmap;
-  try {
-    bitmap = await createImageBitmap(file);
-  } catch {
-    return { ok: false, message: 'Could not read that image' };
-  }
+  const encoded = await encodeImage(file, { maxEdge: 256, quality: 0.85, mode: 'cover' });
+  if (!encoded) return { ok: false, message: 'Could not read that image' };
 
-  const SIZE = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = SIZE;
-  canvas.height = SIZE;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return { ok: false, message: 'Could not process the image' };
-  const side = Math.min(bitmap.width, bitmap.height);
-  const sx = (bitmap.width - side) / 2;
-  const sy = (bitmap.height - side) / 2;
-  ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, SIZE, SIZE);
-  bitmap.close();
-
-  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/webp', 0.85)).then(
-    (b) => b ?? new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.85)),
-  );
-  if (!blob) return { ok: false, message: 'Could not encode the image' };
-
-  const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
-  const path = `${userId}/avatar.${ext}`;
+  // Extension and content type both come from what the encoder ACTUALLY
+  // produced — asking for webp can silently yield png on Safari.
+  const path = `${userId}/avatar.${encoded.ext}`;
   const { error } = await supabase.storage
     .from('avatars')
-    .upload(path, blob, { upsert: true, contentType: blob.type });
+    .upload(path, encoded.blob, { upsert: true, contentType: encoded.type });
   if (error) return { ok: false, message: error.message };
 
   const { data } = supabase.storage.from('avatars').getPublicUrl(path);

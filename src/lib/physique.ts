@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { SocialResult } from './social';
+import { encodeImage } from './imageEncode';
 
 /**
  * Physique board API. Mirrors social.ts conventions: every function no-ops
@@ -64,41 +65,6 @@ const toPost = (r: Row): PhysiquePost => ({
   createdAt: r.created_at,
 });
 
-/**
- * Downscale and re-encode before upload. Aspect ratio is preserved — a
- * physique photo must never be centre-cropped the way an avatar is — and EXIF
- * orientation is baked in so phone photos don't arrive sideways.
- */
-async function encode(
-  file: File,
-  maxEdge: number,
-  quality: number,
-): Promise<{ blob: Blob; w: number; h: number } | null> {
-  let bitmap: ImageBitmap;
-  try {
-    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  } catch {
-    return null;
-  }
-  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
-  const w = Math.round(bitmap.width * scale);
-  const h = Math.round(bitmap.height * scale);
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    bitmap.close();
-    return null;
-  }
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  bitmap.close();
-  const blob =
-    (await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/webp', quality))) ??
-    (await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', quality)));
-  return blob ? { blob, w, h } : null;
-}
-
 /** Uploads both sizes, then writes the row — so a failed upload never leaves
  *  a post pointing at nothing. */
 export async function createPost(
@@ -113,22 +79,25 @@ export async function createPost(
   },
 ): Promise<SocialResult<PhysiquePost>> {
   if (!supabase) return noClient;
-  if (!/^image\//.test(file.type)) return { ok: false, message: 'Pick an image' };
+  if (!file.type.startsWith('image/')) return { ok: false, message: 'Pick an image' };
 
-  const full = await encode(file, 1080, 0.82);
-  const thumb = await encode(file, 360, 0.7);
+  // Aspect ratio is preserved — a physique photo must never be centre-cropped
+  // the way an avatar is.
+  const full = await encodeImage(file, { maxEdge: 1080, quality: 0.82, mode: 'contain' });
+  const thumb = await encodeImage(file, { maxEdge: 360, quality: 0.7, mode: 'contain' });
   if (!full || !thumb) return { ok: false, message: 'Could not read that image' };
 
   const id = crypto.randomUUID();
-  const ext = full.blob.type === 'image/webp' ? 'webp' : 'jpg';
-  const path = `${userId}/${id}.${ext}`;
-  const thumbPath = `${userId}/${id}_t.${ext}`;
+  // Both derived from what the encoder actually produced, so the stored path
+  // and the content type can never disagree.
+  const path = `${userId}/${id}.${full.ext}`;
+  const thumbPath = `${userId}/${id}_t.${thumb.ext}`;
 
-  const up = await supabase.storage.from('physique').upload(path, full.blob, { contentType: full.blob.type });
+  const up = await supabase.storage.from('physique').upload(path, full.blob, { contentType: full.type });
   if (up.error) return { ok: false, message: up.error.message };
   const upT = await supabase.storage
     .from('physique')
-    .upload(thumbPath, thumb.blob, { contentType: thumb.blob.type });
+    .upload(thumbPath, thumb.blob, { contentType: thumb.type });
   if (upT.error) {
     await supabase.storage.from('physique').remove([path]);
     return { ok: false, message: upT.error.message };
@@ -146,8 +115,8 @@ export async function createPost(
       visibility: meta.visibility,
       path,
       thumb_path: thumbPath,
-      width: full.w,
-      height: full.h,
+      width: full.width,
+      height: full.height,
     })
     .select('*')
     .single();
