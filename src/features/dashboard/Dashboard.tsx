@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { ChevronRight, Dumbbell, Flame, Moon, Play, Plus, Snowflake } from 'lucide-react';
 import { Button, Card, CardLabel, CountUp } from '../../components/ui';
-import { heroContainer, heroItem, listItem, spring } from '../../theme/motion';
+import { ambientGlow, heroContainer, heroItem, listItem, spring } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
 import { FREEZES_PER_WEEK, sessionVolume, streakInfo } from '../../lib/formulas';
@@ -83,16 +83,22 @@ export function Dashboard() {
       {display.streak && streak > 0 && (
         <motion.div variants={heroItem}>
           <Card className="relative overflow-hidden flex items-center gap-4 p-5">
-            <div
+            {/* The card breathes at rest — a slow bloom behind the flame, so
+                the streak reads as something living rather than a number. */}
+            <motion.div
               className="absolute inset-0 pointer-events-none"
               style={{ background: 'radial-gradient(ellipse 70% 130% at 10% 50%, var(--accent-soft), transparent 60%)' }}
+              animate={ambientGlow.animate}
+              transition={ambientGlow.transition}
             />
-            <div
+            <motion.div
               className="relative w-12 h-12 rounded-full bg-accent-soft grid place-items-center text-accent shrink-0"
               style={{ boxShadow: 'var(--accent-glow)' }}
+              animate={{ scale: [1, 1.07, 1] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
             >
               <Flame size={24} fill="currentColor" strokeWidth={0} />
-            </div>
+            </motion.div>
             <div className="relative min-w-0">
               <div className="stat-xl">
                 {streak}
@@ -177,10 +183,22 @@ export function Dashboard() {
             </Card>
           ) : (
             up && (
-              <Card className="flex items-center gap-3.5 p-4">
-                <div className="w-11 h-11 rounded-btn bg-accent text-accent-fg grid place-items-center shrink-0">
+              <Card className="relative overflow-hidden flex items-center gap-3.5 p-4">
+                {/* The one card that's asking you to do something — so it's the
+                    one that gets a heartbeat. */}
+                <motion.div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{ background: 'radial-gradient(ellipse 60% 120% at 8% 50%, var(--accent-soft), transparent 62%)' }}
+                  animate={ambientGlow.animate}
+                  transition={ambientGlow.transition}
+                />
+                <motion.div
+                  className="relative w-11 h-11 rounded-btn bg-accent bg-accent-grad text-accent-fg grid place-items-center shrink-0"
+                  animate={{ boxShadow: ['0 0 0 0 rgba(0,0,0,0)', '0 0 18px 2px color-mix(in srgb, var(--accent) 45%, transparent)', '0 0 0 0 rgba(0,0,0,0)'] }}
+                  transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                >
                   <Play size={20} fill="currentColor" strokeWidth={0} />
-                </div>
+                </motion.div>
                 <div className="min-w-0 flex-1">
                   <CardLabel className="mb-0.5">Up next</CardLabel>
                   <div className="font-semibold leading-tight truncate">{up.name}</div>

@@ -5,7 +5,7 @@ import { Button, Card, CardLabel, EmptyState, PageHeader, Segmented } from '../.
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { sfxPop } from '../../lib/sound';
-import { listContainer, listItem, springPop } from '../../theme/motion';
+import { listContainer, listItem, springPop, tapCard } from '../../theme/motion';
 import { useAuth } from '../../store/useAuth';
 import { useSocial } from '../../store/useSocial';
 import { useUI } from '../../store/useUI';
@@ -303,7 +303,7 @@ export function Friends() {
           friends.map((f) => {
             const p = presence[f.userId];
             return (
-              <motion.div key={f.userId} variants={listItem}>
+              <motion.div key={f.userId} variants={listItem} whileTap={tapCard}>
                 <Card
                   className="flex items-center gap-3.5 p-4 cursor-pointer"
                   onClick={() => {

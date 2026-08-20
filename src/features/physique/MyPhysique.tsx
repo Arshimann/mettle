@@ -177,7 +177,7 @@ export function MyPhysique() {
                 }}
               >
                 <Users size={16} />{' '}
-                {confirmShare ? 'Tap again — friends will see it' : 'Share with friends'}
+                {confirmShare ? 'Tap again — it goes on the board' : 'Post to the friends board'}
               </Button>
             ) : (
               <Button

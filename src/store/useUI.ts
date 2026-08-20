@@ -28,11 +28,26 @@ interface UIState {
   overlays: number;
   /** manual re-open of the "What's new" sheet (from Settings → About) */
   whatsNewOpen: boolean;
+  /**
+   * Achievement ids waiting to be announced. They live here rather than in a
+   * component so anything — finishing a session, adding a friend — can raise
+   * one, and so the toast survives a screen change.
+   */
+  unlockedQueue: string[];
+  /**
+   * A full-screen cinematic moment (session intro, finish celebration) owns the
+   * screen. Transient toasts hold their place until it's over rather than
+   * burning their few seconds underneath it.
+   */
+  cinematic: boolean;
   navigate: (screen: ScreenId, params?: Record<string, unknown>) => void;
   back: () => void;
   pushOverlay: () => void;
   popOverlay: () => void;
   setWhatsNewOpen: (open: boolean) => void;
+  pushUnlocked: (ids: string[]) => void;
+  shiftUnlocked: () => void;
+  setCinematic: (on: boolean) => void;
 }
 
 /** Ephemeral navigation state (not persisted). */
@@ -43,6 +58,8 @@ export const useUI = create<UIState>((set, get) => ({
   lastTab: 'home',
   overlays: 0,
   whatsNewOpen: false,
+  unlockedQueue: [],
+  cinematic: false,
   navigate: (screen, params = {}) => {
     const cur = get().screen;
     const a = SCREEN_ORDER.indexOf(cur as never);
@@ -54,4 +71,9 @@ export const useUI = create<UIState>((set, get) => ({
   pushOverlay: () => set((s) => ({ overlays: s.overlays + 1 })),
   popOverlay: () => set((s) => ({ overlays: Math.max(0, s.overlays - 1) })),
   setWhatsNewOpen: (open) => set({ whatsNewOpen: open }),
+  pushUnlocked: (ids) =>
+    set((s) => ({ unlockedQueue: [...s.unlockedQueue, ...ids.filter((id) => !s.unlockedQueue.includes(id))] })),
+  shiftUnlocked: () => set((s) => ({ unlockedQueue: s.unlockedQueue.slice(1) })),
+  setCinematic: (on) => set({ cinematic: on }),
 }));
+

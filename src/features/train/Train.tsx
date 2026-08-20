@@ -8,7 +8,7 @@ import { StallPrompt } from './StallPrompt';
 import { SessionIntro } from './SessionIntro';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
-import { listContainer, listItem, revealBlur } from '../../theme/motion';
+import { listContainer, listItem, revealBlur, springPop } from '../../theme/motion';
 import { useStore, type EndSessionResult } from '../../store/useStore';
 import { useSocial } from '../../store/useSocial';
 import { useUI } from '../../store/useUI';
@@ -39,10 +39,13 @@ function Celebration({
   const sets = result.entry.exercises.reduce((n, ex) => n + ex.sets.length, 0);
   const vol = Math.round(fromKg(sessionVolume(result.entry.exercises), units));
 
-  // Fanfare + glitter under the fireworks, once per celebration.
+  // Fanfare + glitter under the fireworks, once per celebration. Claiming the
+  // screen also holds back transient toasts until it's finished.
   useEffect(() => {
     sfxFanfare();
     sfxSparkle();
+    useUI.getState().setCinematic(true);
+    return () => useUI.getState().setCinematic(false);
   }, []);
 
   const popIn = {
@@ -684,16 +687,35 @@ export function Train() {
                     >
                       F
                     </button>
-                    <button
+                    {/* The most-repeated action in the app — so it gets a real
+                        beat: a ring of light pushing outward as it lands. */}
+                    <motion.button
                       onClick={() => toggleDone(ei, si, weightPlaceholder, repsFill)}
                       aria-label="Mark set done"
+                      whileTap={{ scale: 0.88 }}
+                      transition={springPop}
+                      animate={
+                        set.done
+                          ? {
+                              boxShadow: [
+                                '0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent)',
+                                '0 0 0 12px rgba(0,0,0,0)',
+                              ],
+                            }
+                          : { boxShadow: '0 0 0 0 rgba(0,0,0,0)' }
+                      }
                       className={cn(
                         'w-10 h-11 rounded-btn grid place-items-center shrink-0 border transition-colors',
-                        set.done ? 'bg-accent border-accent text-accent-fg' : 'bg-surface-2 border-border text-fg-subtle',
+                        set.done ? 'bg-accent bg-accent-grad border-accent text-accent-fg' : 'bg-surface-2 border-border text-fg-subtle',
                       )}
                     >
-                      <Check size={18} strokeWidth={3} />
-                    </button>
+                      <motion.span
+                        animate={set.done ? { scale: [0.6, 1.25, 1] } : { scale: 1 }}
+                        transition={{ duration: 0.35, ease: 'easeOut' }}
+                      >
+                        <Check size={18} strokeWidth={3} />
+                      </motion.span>
+                    </motion.button>
                       </>
                     )}
                   </div>

@@ -133,7 +133,12 @@ export function Split() {
         title="Split"
         subtitle={split.length ? `${split.length} day${split.length === 1 ? '' : 's'}` : 'Your training days'}
         action={
-          <div className="flex items-center gap-2">
+          <Button size="sm" variant="accent" onClick={() => { haptics.tap(); setNameSheet({ id: null, value: '' }); }}>
+            <Plus size={15} /> Day
+          </Button>
+        }
+        toolbar={
+          <>
             {split.length > 0 && (
               <Button
                 size="sm"
@@ -152,10 +157,7 @@ export function Split() {
             <Button size="sm" onClick={() => { haptics.tap(); setTemplatesOpen(true); }}>
               <LayoutGrid size={15} /> Templates
             </Button>
-            <Button size="sm" variant="accent" onClick={() => { haptics.tap(); setNameSheet({ id: null, value: '' }); }}>
-              <Plus size={15} /> Day
-            </Button>
-          </div>
+          </>
         }
       />
 
