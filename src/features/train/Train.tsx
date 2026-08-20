@@ -149,7 +149,9 @@ export function Train() {
   const [editDayId, setEditDayId] = useState<string | null>(null);
   const [pendingStalls, setPendingStalls] = useState<{ entryId: string; names: string[] } | null>(null);
   const [editing, setEditing] = useState(false);
-  const [intro, setIntro] = useState<string | null>(null);
+  const intro = useUI((s) => s.intro);
+  const startIntro = useUI((s) => s.startIntro);
+  const endIntro = useUI((s) => s.endIntro);
 
   // Long-press opens the day editor without needing edit mode first.
   const longPress = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -213,7 +215,7 @@ export function Train() {
 
   // ---- the moment between tapping Start and the logger ----
   if (intro) {
-    return <SessionIntro dayName={intro} onDone={() => setIntro(null)} />;
+    return <SessionIntro dayName={intro} onDone={endIntro} />;
   }
 
   // ---- no active session: pick a day to start ----
@@ -298,7 +300,7 @@ export function Train() {
                           cancelLongPress();
                           haptics.success();
                           // The intro takes over while the session spins up.
-                          setIntro(day.name);
+                          startIntro(day.name);
                           startSession(day);
                         }}
                       >

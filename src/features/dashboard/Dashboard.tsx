@@ -8,6 +8,7 @@ import { FREEZES_PER_WEEK, sessionVolume, streakInfo } from '../../lib/formulas'
 import { nextDay } from '../../lib/training';
 import { prettyDate, todayStr, daysTrainedInWeek, startOfWeek } from '../../lib/date';
 import { unitLabel } from '../../lib/units';
+import { haptics } from '../../lib/haptics';
 import { DidYouKnow } from './DidYouKnow';
 import { TodaysLesson } from './TodaysLesson';
 import { DailyWatch } from './DailyWatch';
@@ -50,6 +51,7 @@ export function Dashboard() {
   const stretchEnabled = useStore((s) => s.settings.tabs.stretch);
   const startSession = useStore((s) => s.startSession);
   const navigate = useUI((s) => s.navigate);
+  const startIntro = useUI((s) => s.startIntro);
 
   const today = todayStr();
   // Distinct days this Mon–Sun week — the same measure a frequency goal uses,
@@ -210,6 +212,8 @@ export function Dashboard() {
                   size="sm"
                   variant="accent"
                   onClick={() => {
+                    haptics.success();
+                    startIntro(up.name);
                     startSession(up);
                     navigate('train');
                   }}
@@ -262,6 +266,8 @@ export function Dashboard() {
                   size="sm"
                   variant="accent"
                   onClick={() => {
+                    haptics.success();
+                    startIntro(day.name);
                     startSession(day);
                     navigate('train');
                   }}

@@ -40,6 +40,12 @@ interface UIState {
    * burning their few seconds underneath it.
    */
   cinematic: boolean;
+  /**
+   * Day name to play the session intro for. Held here rather than in Train so
+   * starting a workout from Home gets the same moment — the Train screen just
+   * renders whatever is pending.
+   */
+  intro: string | null;
   navigate: (screen: ScreenId, params?: Record<string, unknown>) => void;
   back: () => void;
   pushOverlay: () => void;
@@ -48,6 +54,8 @@ interface UIState {
   pushUnlocked: (ids: string[]) => void;
   shiftUnlocked: () => void;
   setCinematic: (on: boolean) => void;
+  startIntro: (dayName: string) => void;
+  endIntro: () => void;
 }
 
 /** Ephemeral navigation state (not persisted). */
@@ -60,6 +68,7 @@ export const useUI = create<UIState>((set, get) => ({
   whatsNewOpen: false,
   unlockedQueue: [],
   cinematic: false,
+  intro: null,
   navigate: (screen, params = {}) => {
     const cur = get().screen;
     const a = SCREEN_ORDER.indexOf(cur as never);
@@ -75,5 +84,7 @@ export const useUI = create<UIState>((set, get) => ({
     set((s) => ({ unlockedQueue: [...s.unlockedQueue, ...ids.filter((id) => !s.unlockedQueue.includes(id))] })),
   shiftUnlocked: () => set((s) => ({ unlockedQueue: s.unlockedQueue.slice(1) })),
   setCinematic: (on) => set({ cinematic: on }),
+  startIntro: (dayName) => set({ intro: dayName }),
+  endIntro: () => set({ intro: null }),
 }));
 

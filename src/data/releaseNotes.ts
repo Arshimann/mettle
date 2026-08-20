@@ -20,6 +20,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       'Removing a friend asks first, and says plainly what they’ll lose access to.',
     ],
     fixes: [
+      'Starting a workout from the home screen skipped the intro that the Train tab plays. Both go through the same moment now.',
       'The Split header no longer squashes the day count under the buttons, and “+ Day” doesn’t hang off the edge of the screen.',
       'Changing reading speed or voice mid-article restarted it from the beginning. It now picks up at the word you were on.',
       'A friend’s profile said nothing at all when they had no workouts or no check-ins yet — it now tells you that’s the reason.',
