@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Dumbbell } from 'lucide-react';
 import { sfxSessionStart } from '../../lib/sound';
+import { useUI } from '../../store/useUI';
 
 /**
  * The beat between tapping Start and the logger appearing. Starting a workout
@@ -20,8 +21,12 @@ export function SessionIntro({ dayName, onDone }: { dayName: string; onDone: () 
 
   useEffect(() => {
     sfxSessionStart();
+    useUI.getState().setCinematic(true);
     const t = setTimeout(() => done.current(), 1150);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      useUI.getState().setCinematic(false);
+    };
   }, []);
 
   return (

@@ -2,11 +2,48 @@ export interface ReleaseNote {
   version: string;
   date?: string;
   items: string[];
+  /** Repairs, listed separately — "we added" and "we fixed" are different news. */
+  fixes?: string[];
 }
 
 /** Newest first. Keep entries short and user-facing — these show in the
  *  "What's new" sheet after an update. */
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    version: '1.2.1',
+    date: '2026-08-20',
+    items: [
+      'Achievements finally behave like achievements: one pops up the moment you earn it, wherever you are in the app, and tapping it takes you straight there. Tap any badge to read exactly what it takes.',
+      'Read-aloud got a real upgrade — the good voices your phone hides are now ranked and starred, changing speed or voice keeps your place instead of starting over, and there’s a one-minute guide to installing better ones.',
+      'Post a physique check-in straight to the friends board while you’re taking it, instead of sharing it as a second step.',
+      'The app has a pulse now: presses bloom instead of jolting, your streak and next workout glow gently at rest, and finishing a set lands with a ring of light.',
+      'Removing a friend asks first, and says plainly what they’ll lose access to.',
+    ],
+    fixes: [
+      'Starting a workout from the home screen skipped the intro that the Train tab plays. Both go through the same moment now.',
+      'The Split header no longer squashes the day count under the buttons, and “+ Day” doesn’t hang off the edge of the screen.',
+      'Changing reading speed or voice mid-article restarted it from the beginning. It now picks up at the word you were on.',
+      'A friend’s profile said nothing at all when they had no workouts or no check-ins yet — it now tells you that’s the reason.',
+      'The session timer could show negative time in the first second of a workout.',
+      'Novelty and low-bandwidth voices (the genuinely robotic ones) are filtered out of the voice list.',
+    ],
+  },
+  {
+    version: '1.2.0',
+    date: '2026-08-19',
+    items: [
+      'Edit mode on Train: tap Edit to rearrange or change your days, or just long-press a day card.',
+      'Starting a workout is a moment now — the day name lands, the sound cues, then you’re in.',
+      'A fuller sound palette: session start, rest-timer countdown, achievement unlocks and notifications, plus a softer set-done.',
+      'The reader picks the best voice your device has instead of whatever the platform defaults to, and you can choose your own.',
+    ],
+    fixes: [
+      'Friend requests showed “Lifter” instead of the person’s actual name and photo.',
+      'Photo uploads failed with “image/png is not supported” — Safari was quietly encoding PNG when asked for WebP, and the upload now follows what the browser actually produced.',
+      'Profile picture uploads failed with a row-level security error.',
+      'Opening the notification bell left the rest of the header untappable, and the panel slid to the wrong place.',
+    ],
+  },
   {
     version: '1.1.0',
     date: '2026-08-18',

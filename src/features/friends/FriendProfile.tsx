@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, ChevronLeft, Flame, GitCompareArrows, Loader2, Plus, Star, UserMinus } from 'lucide-react';
-import { Button, Card, CardLabel } from '../../components/ui';
+import { Award, Camera, ChevronLeft, Flame, GitCompareArrows, Loader2, Plus, Star, UserMinus } from 'lucide-react';
+import { Button, Card, CardLabel, Sheet } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { listContainer, listItem } from '../../theme/motion';
 import { consistencyFromDates } from '../../lib/formulas';
+import { prettyDate } from '../../lib/date';
+import { fetchBoard, type PhysiquePost } from '../../lib/physique';
 import { fmtWeight, unitLabel } from '../../lib/units';
 import {
   addComment,
@@ -26,6 +28,7 @@ import { PresenceDot } from './Friends';
 import { WorkoutSocialCard } from './WorkoutSocialCard';
 import { CommentsSheet } from './CommentsSheet';
 import { Compare } from './Compare';
+import { useSignedUrls } from '../physique/useSignedUrls';
 
 const WORKOUT_PAGE = 10;
 
@@ -49,6 +52,8 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
   const [shown, setShown] = useState(WORKOUT_PAGE);
   const [comparing, setComparing] = useState(false);
   const [commentsKey, setCommentsKey] = useState<string | null>(null);
+  const [checkIns, setCheckIns] = useState<PhysiquePost[]>([]);
+  const [photo, setPhoto] = useState<PhysiquePost | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -65,7 +70,12 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [p, w] = await Promise.all([fetchFriendProfile(friendId), fetchFriendWorkouts(friendId, 20)]);
+      const [p, w, board] = await Promise.all([
+        fetchFriendProfile(friendId),
+        fetchFriendWorkouts(friendId, 20),
+        // Only ever returns posts they set to friends — RLS enforces the rest.
+        fetchBoard([friendId], 12),
+      ]);
       if (cancelled) return;
       if (!p.ok || !p.data) {
         setError(p.message ?? 'Could not load this profile');
@@ -75,6 +85,7 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
       setProfile(p.data);
       const list = w.ok && w.data ? w.data : [];
       setWorkouts(list);
+      setCheckIns(board.ok && board.data ? board.data : []);
       setLoading(false);
       void loadReactions(list.map((x) => x.key));
     })();
@@ -87,6 +98,10 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
     setToast(msg);
     setTimeout(() => setToast(null), 2200);
   };
+
+  // Their check-in thumbnails live in a private bucket, so they need signing.
+  const checkInUrls = useSignedUrls(checkIns.map((c) => c.thumbPath));
+  const fullUrls = useSignedUrls(photo ? [photo.path] : []);
 
   const knownNames = useMemo(() => {
     const set = new Set(EXERCISE_LIBRARY.map((e) => e.name.toLowerCase()));
@@ -260,7 +275,48 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
               </div>
             </Card>
           </motion.div>
-        )}
+        )}
+        {/* check-ins */}
+        <motion.div variants={listItem} className="space-y-2.5">
+          <CardLabel className="mb-0 px-0.5">Check-ins</CardLabel>
+          {checkIns.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {checkIns.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    haptics.tap();
+                    setPhoto(c);
+                  }}
+                  className="relative aspect-[4/5] rounded-btn overflow-hidden bg-surface-2 border border-border"
+                >
+                  {checkInUrls.get(c.thumbPath) ? (
+                    <img
+                      src={checkInUrls.get(c.thumbPath)}
+                      alt={`${profile.displayName} on ${prettyDate(c.takenOn)}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="absolute inset-0 grid place-items-center text-fg-subtle">
+                      <Loader2 size={15} className="animate-spin" />
+                    </span>
+                  )}
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent text-white text-[10px] font-semibold px-1.5 py-1 text-left">
+                    {prettyDate(c.takenOn)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <Card className="flex items-center gap-2.5">
+              <Camera size={16} className="text-fg-subtle shrink-0" />
+              <p className="text-sm text-fg-muted">
+                {profile.displayName} hasn’t posted a physique check-in yet.
+              </p>
+            </Card>
+          )}
+        </motion.div>
 
         {/* recent workouts */}
         {workouts.length > 0 ? (
@@ -290,7 +346,9 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
         ) : (
           <motion.div variants={listItem}>
             <Card>
-              <p className="text-sm text-fg-muted">No workouts shared yet.</p>
+              <p className="text-sm text-fg-muted">
+              {profile.displayName} hasn’t shared any workouts yet.
+            </p>
             </Card>
           </motion.div>
         )}
@@ -301,19 +359,63 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
             variant="danger"
             fullWidth
             onClick={() => {
-              if (!confirmRemove) {
-                setConfirmRemove(true);
-                setTimeout(() => setConfirmRemove(false), 3000);
-                return;
-              }
-              haptics.warn();
-              void unfriend(friendId).then(onBack);
+              haptics.tap();
+              setConfirmRemove(true);
             }}
           >
-            <UserMinus size={16} /> {confirmRemove ? 'Tap again to remove' : `Remove ${profile.displayName}`}
+            <UserMinus size={16} /> Remove {profile.displayName}
           </Button>
         </motion.div>
       </motion.div>
+
+      {/* Removing a friend is not reversible from here — say what it costs. */}
+      <Sheet open={confirmRemove} onClose={() => setConfirmRemove(false)} title="Remove friend?">
+        <p className="text-sm text-fg-muted leading-relaxed -mt-1">
+          Are you sure you want to remove <span className="text-fg font-semibold">{profile.displayName}</span>?
+          They’ll no longer be able to see your progress — your workouts, streak, PRs and any check-ins
+          you’ve shared — and you won’t see theirs. You can add each other again later.
+        </p>
+        <div className="flex gap-2.5 mt-4">
+          <Button fullWidth onClick={() => setConfirmRemove(false)}>
+            Keep
+          </Button>
+          <Button
+            variant="danger"
+            fullWidth
+            onClick={() => {
+              haptics.warn();
+              setConfirmRemove(false);
+              void unfriend(friendId).then(onBack);
+            }}
+          >
+            <UserMinus size={16} /> Remove
+          </Button>
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={photo != null}
+        onClose={() => setPhoto(null)}
+        title={photo ? prettyDate(photo.takenOn) : undefined}
+      >
+        {photo && (
+          <div>
+            {fullUrls.get(photo.path) ? (
+              <img
+                src={fullUrls.get(photo.path)}
+                alt={`${profile.displayName}’s check-in`}
+                className="w-full max-h-[60vh] object-contain rounded-card bg-surface-2"
+              />
+            ) : (
+              <div className="h-48 grid place-items-center text-fg-subtle">
+                <Loader2 size={20} className="animate-spin" />
+              </div>
+            )}
+            <p className="text-[12px] text-fg-subtle mt-2.5 capitalize">{photo.pose} pose</p>
+            {photo.caption && <p className="text-sm mt-1.5 leading-snug">{photo.caption}</p>}
+          </div>
+        )}
+      </Sheet>
 
       {commentsKey && (
         <CommentsSheet

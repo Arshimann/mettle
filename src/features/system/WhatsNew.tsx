@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Wrench } from 'lucide-react';
 import { Sheet } from '../../components/ui';
 import { useStore } from '../../store/useStore';
 import { useUI } from '../../store/useUI';
@@ -55,6 +56,27 @@ export function WhatsNew() {
                 </li>
               ))}
             </ul>
+
+            {/* Fixes get their own section — "we added" and "we repaired" are
+                different news, and mixing them buries both. */}
+            {n.fixes && n.fixes.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Wrench size={13} className="text-fg-subtle" />
+                  <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-fg-subtle">
+                    Bug fixes
+                  </span>
+                </div>
+                <ul className="space-y-2">
+                  {n.fixes.map((it, i) => (
+                    <li key={i} className="flex gap-2.5 text-sm text-fg-muted leading-relaxed">
+                      <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-fg-subtle/50 shrink-0" />
+                      <span>{it}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         ))}
       </div>

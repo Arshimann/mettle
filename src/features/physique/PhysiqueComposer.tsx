@@ -177,7 +177,7 @@ export function PhysiqueComposer({ open, onClose }: { open: boolean; onClose: ()
             }}
             options={[
               { value: 'private' as PhysiqueVisibility, label: 'Just me' },
-              { value: 'friends' as PhysiqueVisibility, label: 'Friends' },
+              { value: 'friends' as PhysiqueVisibility, label: 'Post to board' },
             ]}
           />
           <Card className="flex items-start gap-2.5 p-3 mt-2.5">
@@ -194,7 +194,7 @@ export function PhysiqueComposer({ open, onClose }: { open: boolean; onClose: ()
                 <p className="text-[12.5px] text-fg-muted leading-snug">
                   {friendCount === 0
                     ? 'Nobody yet — you have no friends added. Anyone you add later will see it.'
-                    : `Your ${friendCount} friend${friendCount === 1 ? '' : 's'} will see this photo.`}{' '}
+                    : `This goes on the friends board, where your ${friendCount} friend${friendCount === 1 ? '' : 's'} can see, react and comment.`}{' '}
                   You can make it private again any time.
                 </p>
               </>

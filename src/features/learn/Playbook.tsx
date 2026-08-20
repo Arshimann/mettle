@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { BookOpen, Check, ChevronRight, Lock, Sparkles } from 'lucide-react';
 import { Button, Card, CardLabel, Sheet } from '../../components/ui';
 import { cn } from '../../lib/cn';
@@ -7,6 +8,7 @@ import { useStore } from '../../store/useStore';
 import { PLAYBOOK, type PlaybookArticle, type PlaybookSection } from '../../data/playbook';
 import { articleToSpeech, nextUpArticle, sectionProgress, totalRead } from '../../lib/playbook';
 import { ReaderControls } from './ReaderControls';
+import { tapCard } from '../../theme/motion';
 
 /** Marks an article read on genuine engagement, not merely on opening it. */
 function ArticleSheet({ article, onClose }: { article: PlaybookArticle; onClose: () => void }) {
@@ -155,8 +157,9 @@ function SectionCard({ section, onOpen }: { section: PlaybookSection; onOpen: (a
                     {lvl.articles.map((a) => {
                       const read = Boolean(playbook.read[a.id]);
                       return (
-                        <button
+                        <motion.button
                           key={a.id}
+                          whileTap={tapCard}
                           onClick={() => {
                             haptics.tap();
                             onOpen(a);
@@ -176,7 +179,7 @@ function SectionCard({ section, onOpen }: { section: PlaybookSection; onOpen: (a
                             <span className="block text-[11px] text-fg-subtle truncate">{a.summary}</span>
                           </span>
                           <span className="text-[11px] text-fg-subtle shrink-0">{a.minutes}m</span>
-                        </button>
+                        </motion.button>
                       );
                     })}
                   </div>

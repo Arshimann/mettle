@@ -36,5 +36,36 @@ export const revealBlur: Variants = {
   show: { opacity: 1, filter: 'blur(0px)', y: 0, transition: cinematic },
 };
 
-/** Press feedback for tappable surfaces — firm enough to feel. */
-export const tapScale = { scale: 0.95 };
+/**
+ * Press feedback. The settle is only half of it — the bloom of accent light is
+ * what makes a press feel alive rather than mechanical.
+ */
+export const tapScale = { scale: 0.95, boxShadow: 'var(--accent-glow)' };
+
+/** Same idea at card scale, where a 0.95 squeeze would look broken. */
+export const tapCard = { scale: 0.985, boxShadow: 'var(--accent-glow)' };
+
+/**
+ * Slow ambient pulse for surfaces that should look alive at rest — the streak
+ * card, the next-workout prompt. Deliberately long and low-contrast: it should
+ * register at the edge of vision, never demand attention.
+ */
+export const ambientGlow = {
+  animate: {
+    opacity: [0.45, 0.85, 0.45],
+    scale: [1, 1.04, 1],
+  },
+  transition: { duration: 4.5, repeat: Infinity, ease: 'easeInOut' as const },
+};
+
+/** A single bright beat when something lands — a set ticked, a badge earned. */
+export const pulseOnce = {
+  initial: { boxShadow: '0 0 0 0 rgba(0,0,0,0)' },
+  animate: {
+    boxShadow: [
+      '0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent)',
+      '0 0 0 14px rgba(0,0,0,0)',
+    ],
+  },
+  transition: { duration: 0.6, ease: easeOut },
+};
