@@ -68,10 +68,10 @@ export function Stepper({
       <button
         type="button"
         onClick={() => adjust(-1)}
-        className="w-10 h-full grid place-items-center text-fg-muted active:bg-surface-3 shrink-0"
+        className="w-7 h-full grid place-items-center text-fg-muted active:bg-surface-3 shrink-0"
         aria-label={ariaLabel ? `Decrease ${ariaLabel}` : 'Decrease'}
       >
-        <Minus size={16} />
+        <Minus size={15} />
       </button>
       <input
         inputMode={decimal ? 'decimal' : 'numeric'}
@@ -79,15 +79,15 @@ export function Stepper({
         onChange={(e) => onChange(sanitize(e.target.value, decimal, max))}
         placeholder={placeholder}
         aria-label={ariaLabel}
-        className="flex-1 min-w-0 h-full bg-transparent text-center text-[17px] font-bold tabular outline-none"
+        className="flex-1 min-w-0 h-full bg-transparent text-center text-[15px] min-[370px]:text-[16px] font-bold tabular outline-none"
       />
       <button
         type="button"
         onClick={() => adjust(1)}
-        className="w-10 h-full grid place-items-center text-fg-muted active:bg-surface-3 shrink-0"
+        className="w-7 h-full grid place-items-center text-fg-muted active:bg-surface-3 shrink-0"
         aria-label={ariaLabel ? `Increase ${ariaLabel}` : 'Increase'}
       >
-        <Plus size={16} />
+        <Plus size={15} />
       </button>
     </div>
   );
