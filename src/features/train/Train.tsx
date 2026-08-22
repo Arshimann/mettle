@@ -537,7 +537,7 @@ export function Train() {
               ? Number(fmtWeight(suggestKg, units))
               : 0;
           return (
-            <Card key={`${ex.name}-${ei}`}>
+            <Card key={`${ex.name}-${ei}`} className="p-3.5">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-lg truncate">{ex.name}</h3>
                 <div className="flex items-center shrink-0">
@@ -614,8 +614,8 @@ export function Train() {
 
               <div className="space-y-2">
                 {ex.sets.map((set, si) => (
-                  <div key={si} className="flex items-center gap-1.5">
-                    <span className="w-4 text-center text-sm font-bold text-fg-subtle tabular shrink-0">{si + 1}</span>
+                  <div key={si} className="flex items-center gap-[3px]">
+                    <span className="w-3 text-center text-sm font-bold text-fg-subtle tabular shrink-0">{si + 1}</span>
                     {isCardio ? (
                       <>
                         <Stepper
@@ -662,13 +662,13 @@ export function Train() {
                       decimal
                       placeholder={weightPlaceholder}
                       aria-label="Weight"
-                      className={set.done ? 'border-accent' : 'border-border'}
+                      className={cn('flex-[1.25]', set.done ? 'border-accent' : 'border-border')}
                     />
                     <Stepper
                       value={set.reps}
                       onChange={(v) => patchSet(ei, si, { reps: v })}
                       step={1}
-                      placeholder={set.toFailure ? 'reps?' : repsPlaceholder}
+                      placeholder={set.toFailure ? 'max' : repsPlaceholder}
                       aria-label="Reps"
                       className={cn(
                         flashReps?.ei === ei && flashReps?.si === si
@@ -683,7 +683,7 @@ export function Train() {
                       aria-label="To failure"
                       title="To failure"
                       className={cn(
-                        'w-9 h-11 rounded-btn grid place-items-center shrink-0 border text-[13px] font-bold transition-colors',
+                        'w-[30px] h-11 rounded-btn grid place-items-center shrink-0 border text-[13px] font-bold transition-colors',
                         set.toFailure ? 'bg-accent-soft border-accent text-accent' : 'bg-surface-2 border-border text-fg-subtle',
                       )}
                     >
@@ -707,7 +707,7 @@ export function Train() {
                           : { boxShadow: '0 0 0 0 rgba(0,0,0,0)' }
                       }
                       className={cn(
-                        'w-10 h-11 rounded-btn grid place-items-center shrink-0 border transition-colors',
+                        'w-9 h-11 rounded-btn grid place-items-center shrink-0 border transition-colors',
                         set.done ? 'bg-accent bg-accent-grad border-accent text-accent-fg' : 'bg-surface-2 border-border text-fg-subtle',
                       )}
                     >
