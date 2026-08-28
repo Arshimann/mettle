@@ -678,11 +678,3 @@ export const PLAYBOOK: PlaybookSection[] = [
 export const ALL_ARTICLES: PlaybookArticle[] = PLAYBOOK.flatMap((s) =>
   s.levels.flatMap((l) => l.articles),
 );
-
-export const ARTICLE_INDEX = new Map(
-  PLAYBOOK.flatMap((section) =>
-    section.levels.flatMap((level) =>
-      level.articles.map((article) => [article.id, { section, level, article }] as const),
-    ),
-  ),
-);

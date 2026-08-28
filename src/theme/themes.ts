@@ -91,12 +91,8 @@ export const THEME_LIST: ThemeDef[] = [
   THEMES.editorial,
 ];
 
-export const THEME_IDS = THEME_LIST.map((t) => t.id);
 
 /** Kept for callers that only need id → canvas colour. */
-export const THEME_COLORS: Record<ThemeId, string> = Object.fromEntries(
-  THEME_LIST.map((t) => [t.id, t.canvas]),
-) as Record<ThemeId, string>;
 
 export const DEFAULT_THEME: ThemeMode = 'dark';
 
