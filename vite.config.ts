@@ -44,4 +44,30 @@ export default defineConfig({
       devOptions: { enabled: false },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        /**
+         * Split the libraries out of the app chunk.
+         *
+         * Everything used to land in one ~1 MB file, which meant every deploy —
+         * a copy fix, a colour tweak — invalidated React, framer-motion and the
+         * Supabase client along with it, and the service worker re-downloaded
+         * the lot. These four change only when their versions do, so a routine
+         * app update now re-fetches app code alone.
+         *
+         * Supabase is separate for a second reason: nothing imports it until
+         * someone signs in, so an offline-only user never pays for it.
+         */
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('react-dom') || id.includes('/react/')) return 'react';
+          if (id.includes('framer-motion') || id.includes('motion-dom') || id.includes('motion-utils'))
+            return 'motion';
+          if (id.includes('@supabase')) return 'supabase';
+          if (id.includes('@dnd-kit')) return 'dnd';
+        },
+      },
+    },
+  },
 })
