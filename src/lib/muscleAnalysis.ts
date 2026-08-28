@@ -4,7 +4,6 @@ import {
   FIX_EXERCISES,
   REGIONS,
   REGION_ORDER,
-  regionsFor,
   resolveRegions,
   type MuscleRegion,
 } from '../data/muscleMap';
@@ -240,9 +239,4 @@ export function buildMuscleReport(
     unmapped: [...unmapped],
     thin: sessions < 6,
   };
-}
-
-/** Regions a single exercise trains — used by the picker and split quiz. */
-export function regionsOf(name: string, group?: MuscleGroup) {
-  return regionsFor(name, group);
 }

@@ -43,6 +43,10 @@ update storage.buckets
 --    select. In a SQL-bodied function the RETURNS TABLE names are in scope and
 --    can collide with same-named columns; distinct names remove that risk
 --    outright rather than relying on qualification.
+--    Dropped first: an earlier revision of this function returned different
+--    output column names, and create-or-replace cannot change a function's
+--    return type (42P13). Nothing depends on it but the client RPC call.
+drop function if exists public.pending_request_profiles();
 create or replace function public.pending_request_profiles()
 returns table (uid uuid, name text, avatar text)
 language sql stable security definer set search_path = public as $$

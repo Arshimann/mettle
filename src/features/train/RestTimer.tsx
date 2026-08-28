@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, X } from 'lucide-react';
 import { haptics } from '../../lib/haptics';
-import { playChime } from '../../lib/sound';
+import { playChime, sfxCountdownTick } from '../../lib/sound';
 import { useStore } from '../../store/useStore';
 
 export function RestTimer() {
@@ -18,6 +18,13 @@ export function RestTimer() {
     const id = setInterval(() => setNow(Date.now()), 200);
     return () => clearInterval(id);
   }, [endsAt]);
+
+  // Tick the last three seconds so you can look away from the screen. Keyed on
+  // the whole second, so the 200ms poll can't fire the same tick twice.
+  const secsLeft = endsAt ? Math.max(0, Math.ceil((endsAt - now) / 1000)) : null;
+  useEffect(() => {
+    if (restChime && secsLeft !== null && secsLeft > 0 && secsLeft <= 3) sfxCountdownTick();
+  }, [secsLeft, restChime]);
 
   useEffect(() => {
     if (endsAt && now >= endsAt) {

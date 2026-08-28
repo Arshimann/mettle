@@ -1,4 +1,5 @@
 import type { PlaybookProgress } from '../types';
+import { normalizeForSpeech, SPEECH_PAUSE } from './speechText';
 import {
   ALL_ARTICLES,
   PLAYBOOK,
@@ -56,17 +57,6 @@ export function sectionProgress(section: PlaybookSection, p: PlaybookProgress): 
   };
 }
 
-export function isArticleUnlocked(articleId: string, p: PlaybookProgress): boolean {
-  for (const section of PLAYBOOK) {
-    for (const lvl of section.levels) {
-      if (lvl.articles.some((a) => a.id === articleId)) {
-        return lvl.level <= sectionProgress(section, p).unlockedLevel;
-      }
-    }
-  }
-  return false;
-}
-
 /** The next unread, unlocked article — powers the Continue card. */
 export function nextUpArticle(p: PlaybookProgress): PlaybookArticle | null {
   for (const section of PLAYBOOK) {
@@ -84,7 +74,14 @@ export function totalRead(p: PlaybookProgress): { read: number; total: number } 
   return { read: Object.keys(p.read).length, total: ALL_ARTICLES.length };
 }
 
-/** Flatten an article into speakable prose — headings, body, then takeaways. */
+/**
+ * Flatten an article into speakable prose — headings, body, then takeaways.
+ *
+ * Everything goes through normalizeForSpeech, which is what turns "1RM" into
+ * "one-rep max", "8–12" into "8 to 12" and "1.6 g/kg" into "1.6 grams per
+ * kilogram". Without it the synthesiser spells the notation out letter by
+ * letter, which is most of what makes stock TTS sound robotic on this content.
+ */
 export function articleToSpeech(a: PlaybookArticle): string {
   const parts: string[] = [a.title];
   for (const b of a.blocks) {
@@ -92,5 +89,5 @@ export function articleToSpeech(a: PlaybookArticle): string {
     else if (b.text) parts.push(b.text);
   }
   if (a.takeaways.length) parts.push('Key takeaways.', a.takeaways.join('. '));
-  return parts.join(' ');
+  return normalizeForSpeech(parts.join(SPEECH_PAUSE));
 }
