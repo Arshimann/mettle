@@ -8,7 +8,7 @@ import { useStore } from '../../store/useStore';
 import { PLAYBOOK, type PlaybookArticle, type PlaybookSection } from '../../data/playbook';
 import { articleToSpeech, nextUpArticle, sectionProgress, totalRead } from '../../lib/playbook';
 import { ReaderControls } from './ReaderControls';
-import { tapCard } from '../../theme/motion';
+import { springPop } from '../../theme/motion';
 
 /** Marks an article read on genuine engagement, not merely on opening it. */
 function ArticleSheet({ article, onClose }: { article: PlaybookArticle; onClose: () => void }) {
@@ -159,7 +159,8 @@ function SectionCard({ section, onOpen }: { section: PlaybookSection; onOpen: (a
                       return (
                         <motion.button
                           key={a.id}
-                          whileTap={tapCard}
+                          whileTap={{ scale: 0.985 }}
+                          transition={springPop}
                           onClick={() => {
                             haptics.tap();
                             onOpen(a);

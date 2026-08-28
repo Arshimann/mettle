@@ -5,7 +5,7 @@ import { cn } from '../../lib/cn';
 import { prettyDate } from '../../lib/date';
 import { haptics } from '../../lib/haptics';
 import { buildAchievementStats } from '../../lib/achievementStats';
-import { tapCard } from '../../theme/motion';
+import { springPop } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
 import { useSocial } from '../../store/useSocial';
 import { useUI } from '../../store/useUI';
@@ -119,7 +119,8 @@ export function Achievements() {
                     return (
                       <motion.button
                         key={a.id}
-                        whileTap={tapCard}
+                        whileTap={{ scale: 0.985 }}
+                        transition={springPop}
                         onClick={() => {
                           haptics.tap();
                           setDetail(a.id);

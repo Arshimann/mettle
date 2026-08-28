@@ -1,6 +1,6 @@
 import { motion, type HTMLMotionProps } from 'framer-motion';
 import { cn } from '../../lib/cn';
-import { tapScale } from '../../theme/motion';
+import { springPop } from '../../theme/motion';
 import { haptics } from '../../lib/haptics';
 
 type Variant = 'accent' | 'surface' | 'outline' | 'ghost' | 'danger';
@@ -37,7 +37,8 @@ export function Button({
 }: ButtonProps) {
   return (
     <motion.button
-      whileTap={tapScale}
+      whileTap={{ scale: 0.96 }}
+      transition={springPop}
       onClick={(e) => {
         haptics.tap();
         onClick?.(e);

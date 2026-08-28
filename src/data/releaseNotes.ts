@@ -10,6 +10,22 @@ export interface ReleaseNote {
  *  "What's new" sheet after an update. */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '1.2.2',
+    date: '2026-08-28',
+    items: [
+      'The app is quieter. The home screen had four things pulsing at once — the streak card, the flame, the next-workout card and its play button, all on different loops, forever. The glow stays; the throbbing is gone.',
+      'Pressing something settles instead of flaring. Every tap used to fire a wide accent halo, which got old about forty presses into a session.',
+      'Read-aloud finally says the words properly: “one-rep max” instead of spelling out 1RM, “8 to 12” instead of reading the dash, “1.6 grams per kilogram” instead of “g slash kg”. This was written a while ago and never actually switched on.',
+      'The rest timer ticks the last three seconds, so you can look away from the screen.',
+    ],
+    fixes: [
+      'Your friend list was readable by anyone who knew how to ask. A search for a single letter returned ten accounts, and one for “%” returned everybody — names, photos and all. Fixed, along with a way to harvest every account id from the avatar storage.',
+      'Comments, reactions and names now have length limits, there are rate limits on friend requests and comments, and you can delete your own data.',
+      'The app downloads less than half as much on an update — 477 KB instead of 1,047 KB — because the libraries are now cached separately from the app.',
+      'This note. The last few updates shipped without a version bump, so “What’s new” kept showing you the previous patch instead of what had just changed.',
+    ],
+  },
+  {
     version: '1.2.1',
     date: '2026-08-20',
     items: [
