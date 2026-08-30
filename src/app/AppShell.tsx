@@ -15,6 +15,8 @@ import { UpdatePrompt } from '../features/system/UpdatePrompt';
 import { WhatsNew } from '../features/system/WhatsNew';
 import { AchievementUnlock } from '../features/system/AchievementUnlock';
 import { Toaster } from '../features/system/Toaster';
+import { CoachMarks } from '../features/system/CoachMarks';
+import { TOURS, type TourId } from '../data/tours';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { Split } from '../features/split/Split';
 import { Train } from '../features/train/Train';
@@ -156,6 +158,29 @@ function Header() {
   );
 }
 
+/** Runs whichever tour is pending and records it as seen — completed or
+ *  skipped alike, because replaying one against someone's will is worse than
+ *  them missing it. */
+function TourHost() {
+  const tour = useUI((s) => s.tour);
+  const endTour = useUI((s) => s.endTour);
+  const toursSeen = useStore((s) => s.settings.toursSeen ?? []);
+  const updateSettings = useStore((s) => s.updateSettings);
+
+  const steps = tour ? TOURS[tour as TourId] : undefined;
+  if (!tour || !steps) return null;
+
+  return (
+    <CoachMarks
+      steps={steps}
+      onDone={() => {
+        if (!toursSeen.includes(tour)) updateSettings({ toursSeen: [...toursSeen, tour] });
+        endTour();
+      }}
+    />
+  );
+}
+
 export function AppShell() {
   const screen = useUI((s) => s.screen);
   const navigate = useUI((s) => s.navigate);
@@ -213,6 +238,7 @@ export function AppShell() {
 
       <AchievementUnlock />
       <Toaster />
+      <TourHost />
     </div>
   );
 }

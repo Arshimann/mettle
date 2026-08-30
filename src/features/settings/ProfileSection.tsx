@@ -7,6 +7,7 @@ import { useStore } from '../../store/useStore';
 import { fmtWeight, parseNum, toKg, unitLabel } from '../../lib/units';
 import { todayStr } from '../../lib/date';
 import type { Activity, Sex } from '../../types';
+import { INJURY_AREAS, type InjuryArea } from '../../data/injuries';
 
 const ACTIVITIES: { value: Activity; label: string }[] = [
   { value: 'sedentary', label: 'Sedentary' },
@@ -97,6 +98,53 @@ export function ProfileSection() {
             ))}
           </div>
         </div>
+      </Card>
+
+      <Card className="space-y-3">
+        <CardLabel>Working around an injury?</CardLabel>
+        <p className="text-sm text-fg-muted leading-relaxed -mt-1">
+          Pick anything you want Mettle to be careful with. It will flag the movements that load
+          that joint hardest and offer gentler options that train the same muscle.
+        </p>
+        <p className="text-xs text-fg-subtle leading-snug">
+          This only adjusts what Mettle suggests, based on how movements are loaded. It isn’t
+          medical advice — if something hurts, see a professional.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {INJURY_AREAS.map((a) => {
+            const on = (profile.injuries ?? []).includes(a.id);
+            return (
+              <button
+                key={a.id}
+                onClick={() => {
+                  haptics.select();
+                  const cur = profile.injuries ?? [];
+                  setProfile({
+                    injuries: on ? cur.filter((x) => x !== a.id) : ([...cur, a.id] as InjuryArea[]),
+                  });
+                }}
+                aria-pressed={on}
+                className={cn(
+                  'px-3 h-9 rounded-full text-[13px] font-semibold border transition-colors',
+                  on
+                    ? 'bg-warning/15 text-warning border-warning/50'
+                    : 'bg-surface-2 text-fg-muted border-border',
+                )}
+              >
+                {a.label}
+              </button>
+            );
+          })}
+        </div>
+        {(profile.injuries ?? []).length > 0 && (
+          <div className="space-y-1 pt-0.5">
+            {INJURY_AREAS.filter((a) => (profile.injuries ?? []).includes(a.id)).map((a) => (
+              <div key={a.id} className="text-xs text-fg-subtle">
+                <span className="font-semibold text-fg-muted">{a.label}</span> · {a.hint}
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       <Card className="space-y-3">

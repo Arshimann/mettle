@@ -10,6 +10,30 @@ export interface ReleaseNote {
  *  "What's new" sheet after an update. */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '1.3.0',
+    date: '2026-08-30',
+    items: [
+      'Posting a workout is a moment now: the summary crumples, folds into a paper plane and is thrown, with a long woosh behind it. And the app finally tells you where it went — announced when it reaches your friends, silent when it stayed private, with one tap to change that.',
+      'The streak flame burns. Three layers, all flickering on their own rhythm, so it never settles into a loop — and nothing around it moves.',
+      'The logger is sorted into muscle groups, each section counting its own sets and folding away once you finish it. A long full-body day reads at a glance instead of as one endless scroll.',
+      'Swap an exercise mid-session without losing the sets you already logged. The picker leads with movements that train the same thing, so the substitute is a real one.',
+      'Tell Mettle which joints to be careful with, and the exercise picker flags what loads them hardest and offers gentler options that hit the same muscle. Training-load guidance, not medical advice.',
+      'Two guided tours: one around the app after you sign up, one through the Train screen the first time you log a lift. Both replayable from Settings → About, both skippable at any point.',
+      'Settings → About has twenty searchable questions, and every answer ends on the screen that fixes it.',
+      'Your account, on the You tab — the email you signed up with, and a way to change your password.',
+      'Tap any week on your consistency chart to see what you actually did that week: days, sets, volume, PRs and every session.',
+      'Save a single training day, not just a whole split, and drop it into any future program from Templates → Saved.',
+      'Your progress photos open full size at last, with a filter for what you have shared.',
+      'Sessions past an hour read as 1h 30m rather than 90m.',
+    ],
+    fixes: [
+      'Friend requests could still show a placeholder instead of the person’s name. The underlying cause was a database error being thrown away silently, so it now says what went wrong — and the placeholder no longer looks like somebody’s actual name.',
+      'Deleting an exercise mid-workout offers an undo instead of quietly taking your logged sets with it.',
+      'Removing a friend asks a second time, deliberately, before it happens.',
+      'The lettermark next to the wordmark is gone — the name appeared twice in a row on every screen.',
+    ],
+  },
+  {
     version: '1.2.2',
     date: '2026-08-28',
     items: [

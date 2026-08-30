@@ -1,6 +1,7 @@
 import type { SystemPair, ThemeMode } from '../theme/themes';
 import type { DisplayFont, FontScope } from '../theme/displayFont';
 import type { MuscleGroup } from '../data/exercises';
+import type { InjuryArea } from '../data/injuries';
 
 export type Units = 'kg' | 'lbs';
 export type Sex = 'male' | 'female' | null;
@@ -142,6 +143,10 @@ export interface Profile {
   age: number | null;
   sex: Sex;
   activity: Activity;
+  /** Areas to work around. Drives exercise suggestions only — see
+   *  src/lib/injuryAnalysis.ts. Stays on the device: publishSharedProfile
+   *  never reads `profile`, and health data has no business on a shared row. */
+  injuries: InjuryArea[];
 }
 
 export interface DisplayToggles {
@@ -195,6 +200,8 @@ export interface Settings {
   display: DisplayToggles;
   /** Highest app version whose "What's new" notes the user has seen. */
   lastSeenVersion: string;
+  /** Guided tours already completed or skipped. Never replayed unasked. */
+  toursSeen: string[];
 }
 
 /** In-progress workout. Values are entered as strings, committed to history as numbers. */

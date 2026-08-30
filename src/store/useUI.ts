@@ -69,6 +69,8 @@ interface UIState {
    * renders whatever is pending.
    */
   intro: string | null;
+  /** Which guided tour is running, if any. */
+  tour: string | null;
   /** Live transient messages, oldest first. Capped at MAX_TOASTS. */
   toasts: Toast[];
   navigate: (screen: ScreenId, params?: Record<string, unknown>) => void;
@@ -81,6 +83,8 @@ interface UIState {
   setCinematic: (on: boolean) => void;
   startIntro: (dayName: string) => void;
   endIntro: () => void;
+  startTour: (id: string) => void;
+  endTour: () => void;
   toast: (t: Omit<Toast, 'id'>) => void;
   dismissToast: (id: string) => void;
 }
@@ -96,6 +100,7 @@ export const useUI = create<UIState>((set, get) => ({
   unlockedQueue: [],
   cinematic: false,
   intro: null,
+  tour: null,
   toasts: [],
   navigate: (screen, params = {}) => {
     const cur = get().screen;
@@ -114,6 +119,8 @@ export const useUI = create<UIState>((set, get) => ({
   setCinematic: (on) => set({ cinematic: on }),
   startIntro: (dayName) => set({ intro: dayName }),
   endIntro: () => set({ intro: null }),
+  startTour: (id) => set({ tour: id }),
+  endTour: () => set({ tour: null }),
   toast: (t) =>
     set((s) => ({ toasts: [...s.toasts, { ...t, id: uid() }].slice(-MAX_TOASTS) })),
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),

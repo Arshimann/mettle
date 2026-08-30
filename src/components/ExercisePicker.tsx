@@ -7,6 +7,9 @@ import { useStore } from '../store/useStore';
 import { EXERCISE_LIBRARY, MUSCLE_GROUPS, type MuscleGroup } from '../data/exercises';
 import { regionsFor } from '../data/muscleMap';
 import { groupOf } from '../lib/exerciseGroups';
+import { INJURY_AREAS } from '../data/injuries';
+import { gentlerAlternatives, kindLabel, strainFor, worstStrain } from '../lib/injuryAnalysis';
+import { useUI } from '../store/useUI';
 
 /** Searchable exercise picker. In 'add' mode it stays open after a pick so
  *  several can be added; already-added names (via `exclude`) show as "Added".
@@ -36,6 +39,10 @@ export function ExercisePicker({
   const addCustomExercise = useStore((s) => s.addCustomExercise);
   const removeCustomExercise = useStore((s) => s.removeCustomExercise);
 
+  const injuries = useStore((s) => s.profile.injuries ?? []);
+  const toast = useUI((s) => s.toast);
+  const [kindOnly, setKindOnly] = useState(false);
+
   const [q, setQ] = useState('');
   const [group, setGroup] = useState<MuscleGroup | 'All'>('All');
   // When adding a custom name with no group filter active, ask for a category.
@@ -52,15 +59,19 @@ export function ExercisePicker({
     [customExercises],
   );
 
-  const results = useMemo(
-    () =>
-      all.filter((e) => {
-        if (group !== 'All' && e.group !== group) return false;
-        if (q && !e.name.toLowerCase().includes(q.toLowerCase())) return false;
-        return true;
-      }),
-    [all, q, group],
-  );
+  const results = useMemo(() => {
+    const base = all.filter((e) => {
+      if (group !== 'All' && e.group !== group) return false;
+      if (q && !e.name.toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    });
+    if (!kindOnly || injuries.length === 0) return base;
+    // Hide only the worst offenders, then lead with the gentlest. Never hide
+    // everything — the user is an adult and may have a reason.
+    return base
+      .filter((e) => worstStrain(e.name, e.group, injuries) < 1.5)
+      .sort((a, b) => worstStrain(a.name, a.group, injuries) - worstStrain(b.name, b.group, injuries));
+  }, [all, q, group, kindOnly, injuries]);
 
   const customName = q.trim();
   const showCustom =
@@ -86,14 +97,34 @@ export function ExercisePicker({
         return { e, primaryScore: theirs[primary] ?? 0, overlap };
       })
       .filter((x) => x.primaryScore > 0)
-      .sort((a, b) => b.primaryScore - a.primaryScore || b.overlap - a.overlap)
+      // Asking for a substitute is the exact moment we know which substitutes
+      // are kinder — so when areas are flagged, strain leads the ordering.
+      .sort(
+        (a, b) =>
+          (injuries.length
+            ? worstStrain(a.e.name, a.e.group, injuries) - worstStrain(b.e.name, b.e.group, injuries)
+            : 0) ||
+          b.primaryScore - a.primaryScore ||
+          b.overlap - a.overlap,
+      )
       .slice(0, 5)
       .map((x) => x.e);
-  }, [mode, replacing, all, excludeSet, customExercises]);
+  }, [mode, replacing, all, excludeSet, customExercises, injuries]);
 
   const pick = (name: string) => {
     haptics.select();
     onPick(name);
+    // Suggested after the fact, never as a block: it respects the choice and
+    // still offers the help.
+    if (injuries.length > 0) {
+      const g = groupOf(name, customExercises) ?? undefined;
+      if (worstStrain(name, g, injuries) >= 1) {
+        const alts = gentlerAlternatives(name, g, injuries, customExercises, 2);
+        if (alts.length > 0) {
+          toast({ message: `Added. Gentler options: ${alts.join(', ')}`, tone: 'neutral', duration: 4200 });
+        }
+      }
+    }
     // Replacing is a single decision — staying open would be a second prompt.
     if (mode === 'replace') onClose();
   };
@@ -133,6 +164,23 @@ export function ExercisePicker({
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto no-scrollbar mb-3 -mx-1 px-1">
+        {injuries.length > 0 && (
+          <button
+            onClick={() => {
+              haptics.tap();
+              setKindOnly((v) => !v);
+            }}
+            aria-pressed={kindOnly}
+            className={cn(
+              'shrink-0 px-3 h-8 rounded-full text-[13px] font-semibold border transition-colors',
+              kindOnly
+                ? 'bg-warning text-canvas border-warning'
+                : 'bg-surface-2 text-warning border-warning/50',
+            )}
+          >
+            {kindLabel(injuries, (a) => INJURY_AREAS.find((x) => x.id === a)?.label ?? a)}
+          </button>
+        )}
         {(['All', ...MUSCLE_GROUPS] as const).map((g) => (
           <button
             key={g}
@@ -218,7 +266,23 @@ export function ExercisePicker({
                     <Star size={12} className="text-accent shrink-0" fill="currentColor" strokeWidth={0} />
                   )}
                 </span>
-                <span className="text-[11px] text-fg-subtle shrink-0 ml-2">{added ? 'Added' : e.group}</span>
+                {(() => {
+                  if (added) return <span className="text-[11px] text-fg-subtle shrink-0 ml-2">Added</span>;
+                  const load = worstStrain(e.name, e.group, injuries);
+                  if (load < 1) return <span className="text-[11px] text-fg-subtle shrink-0 ml-2">{e.group}</span>;
+                  const why = strainFor(e.name, e.group).reason;
+                  return (
+                    <span
+                      title={why}
+                      className={cn(
+                        'text-[10.5px] font-semibold shrink-0 ml-2 px-1.5 py-0.5 rounded-md max-w-[9rem] truncate',
+                        load >= 1.5 ? 'bg-danger/15 text-danger' : 'bg-warning/15 text-warning',
+                      )}
+                    >
+                      {why || e.group}
+                    </span>
+                  );
+                })()}
               </button>
               {e.customId && (
                 <button

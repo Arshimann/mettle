@@ -15,6 +15,7 @@ import { ProfileSection } from './ProfileSection';
 import type { SettingsSectionId } from './sections';
 import type { DisplayToggles, TabToggles } from '../../types';
 import { FAQ } from '../../data/faq';
+import { TOURS, type TourId } from '../../data/tours';
 import { cn } from '../../lib/cn';
 
 /** Searchable questions, each answer ending on the screen that fixes it. */
@@ -416,6 +417,47 @@ export function Settings() {
               </Button>
             </Card>
           )}
+          <Card>
+            <CardLabel>Guided tours</CardLabel>
+            <p className="text-sm text-fg-muted leading-relaxed mb-3">
+              Walk through the app again whenever you like.
+            </p>
+            <div className="space-y-2">
+              {(
+                [
+                  ['welcome', 'Around the app', 'The five screens and what each is for'],
+                  ['first-lift', 'Logging a workout', 'Every control on the Train screen'],
+                ] as [TourId, string, string][]
+              ).map(([id, label, desc]) => (
+                <div key={id} className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-[15px]">{label}</div>
+                    <div className="text-xs text-fg-muted mt-0.5">{desc}</div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      haptics.tap();
+                      // Clear the seen mark so it can run again, then start it.
+                      updateSettings({
+                        toursSeen: (settings.toursSeen ?? []).filter((t) => t !== id),
+                      });
+                      useUI.getState().navigate(id === 'first-lift' ? 'train' : 'home');
+                      useUI.getState().startTour(id);
+                    }}
+                    disabled={!TOURS[id]}
+                  >
+                    Replay
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-fg-subtle mt-3 leading-snug">
+              Logging a workout points at the Train screen’s controls, so start a session first if
+              you want the spotlights to land.
+            </p>
+          </Card>
+
           <InstallSheet open={installOpen} onClose={() => setInstallOpen(false)} />
         </>
       )}

@@ -202,6 +202,16 @@ export function Train() {
     return () => clearInterval(id);
   }, [session]);
 
+  // The very first workout, not merely the first visit to this tab. Waits for
+  // the intro to clear so the spotlight lands on a settled screen.
+  const toursSeen = useStore((s) => s.settings.toursSeen ?? []);
+  const historyCount = history.length;
+  useEffect(() => {
+    if (!session || intro || historyCount > 0 || toursSeen.includes('first-lift')) return;
+    const t = setTimeout(() => useUI.getState().startTour('first-lift'), 600);
+    return () => clearTimeout(t);
+  }, [session, intro, historyCount, toursSeen]);
+
   // ---- the throw, between saving and the celebration ----
   if (sendOff) {
     return (
@@ -856,6 +866,7 @@ export function Train() {
                     haptics.tap();
                     addSet(ei);
                   }}
+                  data-coach="add-set"
                   className="flex items-center gap-1 text-[13px] font-semibold text-accent"
                 >
                   <Plus size={15} /> Add set
@@ -886,7 +897,14 @@ export function Train() {
         <Plus size={16} /> Add exercise
       </Button>
 
-      <Button variant="accent" size="lg" fullWidth className="mt-3" onClick={() => { haptics.warn(); setConfirmEnd(true); }}>
+      <Button
+        variant="accent"
+        size="lg"
+        fullWidth
+        className="mt-3"
+        data-coach="finish-workout"
+        onClick={() => { haptics.warn(); setConfirmEnd(true); }}
+      >
         Finish workout
       </Button>
 

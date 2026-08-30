@@ -153,6 +153,7 @@ const initialData: AppData = {
     soundFx: true,
     trainingStyle: null,
     lastSeenVersion: '',
+    toursSeen: [],
     tabs: { split: true, stretch: true, progress: true, learn: false, friends: true },
     display: {
       stats: true,
@@ -167,7 +168,7 @@ const initialData: AppData = {
       upNext: true,
     },
   },
-  profile: { height: null, age: null, sex: 'male', activity: 'moderate' },
+  profile: { height: null, age: null, sex: 'male', activity: 'moderate', injuries: [] },
   split: [],
   savedSplits: [],
   savedDays: [],
@@ -559,12 +560,15 @@ export const useStore = create<Store>()(
         // Older installs stored sex:null, which silently blocked calorie targets.
         // Default it so TDEE always resolves once height + age are set.
         if (profile.sex == null) profile.sex = 'male';
+        // Installs from before v1.3 have no array here at all.
+        if (!Array.isArray(profile.injuries)) profile.injuries = [];
         return {
           ...current,
           ...p,
           settings: {
             ...current.settings,
             ...ps,
+            toursSeen: ps.toursSeen ?? current.settings.toursSeen,
             tabs: { ...current.settings.tabs, ...(ps.tabs ?? {}) },
             systemPair: normalizeSystemPair(ps.systemPair),
             display: { ...current.settings.display, ...(ps.display ?? {}) },

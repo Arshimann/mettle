@@ -7,6 +7,7 @@ import { cn } from '../../lib/cn';
 import { easeOut, heroContainer, heroItem } from '../../theme/motion';
 import { haptics } from '../../lib/haptics';
 import { useStore } from '../../store/useStore';
+import { useUI } from '../../store/useUI';
 import { useAuth } from '../../store/useAuth';
 import { AuthPanel } from '../auth/AuthPanel';
 import { InstallGuide } from '../system/InstallGuide';
@@ -57,6 +58,8 @@ export function Onboarding() {
     });
     haptics.success();
     completeOnboarding();
+    // Setup configured the app; this shows how to use it, on the real screens.
+    useUI.getState().startTour('welcome');
   };
 
   const key = STEPS[step];
