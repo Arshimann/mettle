@@ -1,3 +1,4 @@
+import { UNKNOWN_NAME } from '../../lib/social';
 import { useEffect, useState } from 'react';
 import { ChevronRight, Flame, Users } from 'lucide-react';
 import { Card, CardLabel } from '../../components/ui';
@@ -84,7 +85,7 @@ export function FriendActivity() {
               const who = nameOf(w.userId);
               return (
                 <div key={w.key} className="flex items-center gap-2.5">
-                  <Avatar name={who?.displayName ?? 'Lifter'} url={who?.avatarUrl ?? null} size={26} />
+                  <Avatar name={who?.displayName ?? UNKNOWN_NAME} url={who?.avatarUrl ?? null} size={26} />
                   <span className="min-w-0 flex-1 text-[13px] truncate">
                     <span className="font-semibold">{who?.displayName ?? 'A friend'}</span>
                     <span className="text-fg-muted"> · {w.dayName}</span>

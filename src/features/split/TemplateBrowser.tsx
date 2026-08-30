@@ -44,6 +44,9 @@ export function TemplateBrowser({ open, onClose }: { open: boolean; onClose: () 
   const applyTemplate = useStore((s) => s.applyTemplate);
   const applySavedSplit = useStore((s) => s.applySavedSplit);
   const deleteSavedSplit = useStore((s) => s.deleteSavedSplit);
+  const savedDays = useStore((s) => s.savedDays);
+  const addSavedDay = useStore((s) => s.addSavedDay);
+  const deleteSavedDay = useStore((s) => s.deleteSavedDay);
   const addDay = useStore((s) => s.addDay);
 
   const [tab, setTab] = useState<Tab>('splits');
@@ -115,7 +118,10 @@ export function TemplateBrowser({ open, onClose }: { open: boolean; onClose: () 
             options={[
               { value: 'splits' as Tab, label: 'Splits' },
               { value: 'days' as Tab, label: 'Single day' },
-              { value: 'saved' as Tab, label: `Saved${savedSplits.length ? ` (${savedSplits.length})` : ''}` },
+              {
+                value: 'saved' as Tab,
+                label: `Saved${savedSplits.length + savedDays.length ? ` (${savedSplits.length + savedDays.length})` : ''}`,
+              },
             ]}
           />
 
@@ -183,18 +189,73 @@ export function TemplateBrowser({ open, onClose }: { open: boolean; onClose: () 
 
             {tab === 'saved' && (
               <div>
-                {savedSplits.length === 0 ? (
+                {savedDays.length > 0 && (
+                  <div className="mb-5">
+                    <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-fg-subtle mb-2 px-0.5">
+                      Saved days
+                    </div>
+                    <div className="space-y-2">
+                      {savedDays.map((d) => (
+                        <div key={d.id} className="rounded-card bg-surface-2 p-3.5 flex items-center gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold truncate">{d.name}</div>
+                            <div className="text-xs text-fg-muted mt-0.5">
+                              {d.exercises.length} exercise{d.exercises.length === 1 ? '' : 's'} · saved{' '}
+                              {prettyDate(d.savedAt.slice(0, 10))}
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="accent"
+                            onClick={() => {
+                              haptics.success();
+                              addSavedDay(d.id);
+                              onClose();
+                            }}
+                            aria-label={`Add ${d.name} to your split`}
+                          >
+                            <Plus size={15} /> Add
+                          </Button>
+                          <button
+                            onClick={() => {
+                              if (confirmDelete === d.id) {
+                                deleteSavedDay(d.id);
+                                haptics.warn();
+                                setConfirmDelete(null);
+                              } else {
+                                setConfirmDelete(d.id);
+                                setTimeout(() => setConfirmDelete((c) => (c === d.id ? null : c)), 3000);
+                              }
+                            }}
+                            aria-label={`Delete saved day ${d.name}`}
+                            className={cn(
+                              'w-8 h-8 grid place-items-center shrink-0',
+                              confirmDelete === d.id ? 'text-danger' : 'text-fg-subtle',
+                            )}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {savedSplits.length === 0 && savedDays.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="w-11 h-11 rounded-card bg-surface-2 grid place-items-center text-fg-subtle mx-auto mb-3">
                       <Bookmark size={20} />
                     </div>
                     <p className="text-sm text-fg-muted leading-relaxed max-w-[16rem] mx-auto">
-                      No saved presets yet. Build a split you like, then tap{' '}
-                      <span className="font-semibold text-fg">Save preset</span> on the Split screen to keep it here.
+                      Nothing saved yet. Bookmark a single day, or tap{' '}
+                      <span className="font-semibold text-fg">Save</span> on the Split screen to keep the whole
+                      split here.
                     </p>
                   </div>
-                ) : (
+                ) : savedSplits.length === 0 ? null : (
                   <>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-fg-subtle mb-2 px-0.5">
+                      Saved splits
+                    </div>
                     {hasSplit && <ModeChoice mode={mode} onChange={setMode} dayCount={split.length} />}
                     <div className="space-y-2">
                       {savedSplits.map((p) => (

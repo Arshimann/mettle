@@ -74,6 +74,15 @@ export interface SavedSplit {
   days: { name: string; exercises: SplitExercise[] }[];
 }
 
+/** One training day, kept on its own so a good Push can outlive the split it
+ *  was built in. Distinct from SavedSplit, which snapshots every day at once. */
+export interface SavedDay {
+  id: string;
+  name: string;
+  savedAt: string;
+  exercises: SplitExercise[];
+}
+
 export interface PR {
   id: string;
   exercise: string;

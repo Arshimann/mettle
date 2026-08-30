@@ -58,7 +58,7 @@ const toMyShared = (r: SharedProfileRow): MyShared => ({
 
 const toFriendProfile = (r: SharedProfileRow): FriendProfileData => ({
   userId: r.user_id,
-  displayName: r.display_name ?? 'Lifter',
+  displayName: r.display_name ?? UNKNOWN_NAME,
   avatarUrl: r.avatar_url,
   streak: r.streak ?? 0,
   trainedDates: Array.isArray(r.trained_dates) ? r.trained_dates : [],
@@ -255,6 +255,13 @@ export async function sendFriendRequest(userId: string, toId: string): Promise<S
   return { ok: true };
 }
 
+/**
+ * Shown when we genuinely cannot resolve someone's name. "Lifter" read like a
+ * real display name, so a failure to load looked like a person who had chosen
+ * to be called that. This cannot be mistaken for a name.
+ */
+export const UNKNOWN_NAME = 'Someone';
+
 export async function acceptFriendRequest(requestId: string): Promise<SocialResult> {
   if (!supabase) return noClient;
   const { error } = await supabase.rpc('accept_friend_request', { req: requestId });
@@ -296,7 +303,7 @@ export async function fetchFriends(userId: string): Promise<SocialResult<FriendS
     data: ((profiles ?? []) as SharedProfileRow[])
       .map((r) => ({
         userId: r.user_id,
-        displayName: r.display_name ?? 'Lifter',
+        displayName: r.display_name ?? UNKNOWN_NAME,
         avatarUrl: r.avatar_url,
         streak: r.streak ?? 0,
       }))
@@ -323,7 +330,17 @@ export async function fetchRequests(
     // their row — which is why requests used to show "Lifter". This RPC is
     // security-definer and returns name + avatar only for people already in a
     // request relationship with us.
-    const { data: pending } = await supabase.rpc('pending_request_profiles');
+    const { data: pending, error: rpcErr } = await supabase.rpc('pending_request_profiles');
+    // Swallowing this is what made the bug undiagnosable: if migration 0007 was
+    // never applied to the project, every request silently falls through to the
+    // unknown-name path and looks like a display-name problem instead.
+    if (rpcErr) {
+      console.warn(
+        '[social] pending_request_profiles failed — friend requests will show ' +
+          `"${UNKNOWN_NAME}". Has supabase/migrations/0007_fixes.sql been applied? `,
+        rpcErr.message,
+      );
+    }
     // Columns are uid/name/avatar — deliberately distinct from the underlying
     // ones so the SQL function can't hit a name collision.
     type P = { uid: string; name: string | null; avatar: string | null };
@@ -339,7 +356,7 @@ export async function fetchRequests(
         .select('user_id, display_name, avatar_url')
         .in('user_id', missing);
       for (const p of (profiles ?? []) as SharedProfileRow[]) {
-        names.set(p.user_id, { displayName: p.display_name ?? 'Lifter', avatarUrl: p.avatar_url });
+        names.set(p.user_id, { displayName: p.display_name ?? UNKNOWN_NAME, avatarUrl: p.avatar_url });
       }
     }
   }
@@ -350,7 +367,7 @@ export async function fetchRequests(
       id: r.id,
       fromId: r.from_id,
       toId: r.to_id,
-      displayName: info?.displayName ?? 'Lifter',
+      displayName: info?.displayName ?? UNKNOWN_NAME,
       avatarUrl: info?.avatarUrl ?? null,
     };
   };

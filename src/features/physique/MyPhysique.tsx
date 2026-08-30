@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Camera, GitCompareArrows, Lock, Trash2, Users } from 'lucide-react';
-import { Button, Card, CardLabel, Sheet } from '../../components/ui';
+import { Camera, GitCompareArrows, ImageIcon, Loader2, Lock, Trash2, Users } from 'lucide-react';
+import { Button, Card, CardLabel, Segmented, Sheet } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
 import { prettyDate } from '../../lib/date';
@@ -27,6 +27,10 @@ export function MyPhysique() {
   const [actionFor, setActionFor] = useState<string | null>(null);
   const [confirmShare, setConfirmShare] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Which check-in is open full size. Held by id so it survives a reload of the
+  // list rather than pinning a stale copy of the row.
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'shared' | 'private'>('all');
 
   useEffect(() => {
     if (userId) void loadMine(userId);
@@ -34,6 +38,13 @@ export function MyPhysique() {
 
   const urls = useSignedUrls(myPosts.map((p) => p.thumbPath));
   const actionPost = actionFor ? myPosts.find((p) => p.id === actionFor) : null;
+  const viewing = viewingId ? myPosts.find((p) => p.id === viewingId) : null;
+  // Full-size images live in a private bucket, so they are signed on demand —
+  // signing every one up front would be a request per photo for nothing.
+  const fullUrls = useSignedUrls(viewing ? [viewing.path] : []);
+  const shown = myPosts.filter((p) =>
+    filter === 'all' ? true : filter === 'shared' ? p.visibility !== 'private' : p.visibility === 'private',
+  );
   const comparePair = useMemo(
     () => (picked.length === 2 ? picked.map((id) => myPosts.find((p) => p.id === id)!).filter(Boolean) : null),
     [picked, myPosts],
@@ -72,8 +83,29 @@ export function MyPhysique() {
                 Pick two to compare {picked.length > 0 && `· ${picked.length}/2`}
               </p>
             )}
+            {myPosts.length > 1 && (
+              <div className="mb-2.5">
+                <Segmented
+                  fullWidth
+                  value={filter}
+                  onChange={setFilter}
+                  options={[
+                    { value: 'all' as const, label: 'All' },
+                    { value: 'shared' as const, label: 'Shared' },
+                    { value: 'private' as const, label: 'Private' },
+                  ]}
+                />
+              </div>
+            )}
+            {shown.length === 0 && (
+              <p className="text-sm text-fg-muted mb-3.5">
+                {filter === 'shared'
+                  ? "You haven't shared any check-ins yet."
+                  : 'Every check-in is shared right now.'}
+              </p>
+            )}
             <div className="grid grid-cols-3 gap-2 mb-3.5">
-              {myPosts.map((p) => {
+              {shown.map((p) => {
                 const url = urls.get(p.thumbPath);
                 const isPicked = picked.includes(p.id);
                 return (
@@ -158,6 +190,18 @@ export function MyPhysique() {
               )}
             </Card>
 
+            <Button
+              size="lg"
+              fullWidth
+              onClick={() => {
+                haptics.tap();
+                setViewingId(actionPost.id);
+                setActionFor(null);
+              }}
+            >
+              <ImageIcon size={16} /> View photo
+            </Button>
+
             {actionPost.visibility === 'private' ? (
               <Button
                 variant={confirmShare ? 'danger' : 'outline'}
@@ -212,6 +256,38 @@ export function MyPhysique() {
             >
               <Trash2 size={16} /> {confirmDelete ? 'Tap again to delete for good' : 'Delete this check-in'}
             </Button>
+          </div>
+        )}
+      </Sheet>
+
+      {/* Full-size viewer. Same shape as the one on a friend's profile. */}
+      <Sheet
+        open={viewing != null}
+        onClose={() => setViewingId(null)}
+        title={viewing ? prettyDate(viewing.takenOn) : undefined}
+      >
+        {viewing && (
+          <div>
+            {fullUrls.get(viewing.path) ? (
+              <img
+                src={fullUrls.get(viewing.path)}
+                alt={`Your check-in from ${prettyDate(viewing.takenOn)}`}
+                className="w-full max-h-[60vh] object-contain rounded-card bg-surface-2"
+              />
+            ) : (
+              <div className="h-48 grid place-items-center text-fg-subtle">
+                <Loader2 size={20} className="animate-spin" />
+              </div>
+            )}
+            <p className="text-[12px] text-fg-subtle mt-2.5 capitalize">{viewing.pose} pose</p>
+            {viewing.caption && <p className="text-sm mt-1.5 leading-snug">{viewing.caption}</p>}
+            <p className="text-[12px] text-fg-muted mt-2 flex items-center gap-1.5">
+              {viewing.visibility === 'private' ? (
+                <><Lock size={12} /> Only you can see this.</>
+              ) : (
+                <><Users size={12} className="text-accent" /> Shared with your friends.</>
+              )}
+            </p>
           </div>
         )}
       </Sheet>

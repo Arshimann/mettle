@@ -57,6 +57,8 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
   const [checkIns, setCheckIns] = useState<PhysiquePost[]>([]);
   const [photo, setPhoto] = useState<PhysiquePost | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // Second gate inside the sheet. Removing someone is not reversible from here.
+  const [confirmFinal, setConfirmFinal] = useState(false);
   const toast = useUI((s) => s.toast);
 
   const loadReactions = useCallback(
@@ -369,7 +371,14 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
       </motion.div>
 
       {/* Removing a friend is not reversible from here — say what it costs. */}
-      <Sheet open={confirmRemove} onClose={() => setConfirmRemove(false)} title="Remove friend?">
+      <Sheet
+        open={confirmRemove}
+        onClose={() => {
+          setConfirmRemove(false);
+          setConfirmFinal(false);
+        }}
+        title="Remove friend?"
+      >
         <p className="text-sm text-fg-muted leading-relaxed -mt-1">
           Are you sure you want to remove <span className="text-fg font-semibold">{profile.displayName}</span>?
           They’ll no longer be able to see your progress — your workouts, streak, PRs and any check-ins
@@ -383,12 +392,31 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
             variant="danger"
             fullWidth
             onClick={() => {
+              // Four seconds rather than three: the actions that affect another
+              // person get the longer window, same as the physique photos.
+              if (!confirmFinal) {
+                setConfirmFinal(true);
+                haptics.warn();
+                setTimeout(() => setConfirmFinal(false), 4000);
+                return;
+              }
               haptics.warn();
               setConfirmRemove(false);
-              void unfriend(friendId).then(onBack);
+              setConfirmFinal(false);
+              const name = profile.displayName;
+              void unfriend(friendId).then(() => {
+                useUI.getState().toast({ message: `Removed ${name}`, tone: 'danger' });
+                onBack();
+              });
             }}
           >
-            <UserMinus size={16} /> Remove
+            {confirmFinal ? (
+              'Tap again — this removes them'
+            ) : (
+              <>
+                <UserMinus size={16} /> Remove
+              </>
+            )}
           </Button>
         </div>
       </Sheet>

@@ -1,3 +1,4 @@
+import { UNKNOWN_NAME } from '../../lib/social';
 import { useEffect, useMemo, useState } from 'react';
 import { Camera, ImageOff, Loader2, MessageCircle } from 'lucide-react';
 import { Button, Card, EmptyState } from '../../components/ui';
@@ -45,9 +46,9 @@ function PostCard({
   return (
     <Card className="p-0 overflow-hidden">
       <div className="flex items-center gap-3 p-3.5">
-        <Avatar name={author?.displayName ?? 'Lifter'} url={author?.avatarUrl ?? null} size={36} />
+        <Avatar name={author?.displayName ?? UNKNOWN_NAME} url={author?.avatarUrl ?? null} size={36} />
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-[14px] truncate">{author?.displayName ?? 'Lifter'}</div>
+          <div className="font-semibold text-[14px] truncate">{author?.displayName ?? UNKNOWN_NAME}</div>
           <div className="text-[11px] text-fg-muted">
             {prettyDate(post.takenOn)} · {post.pose}
             {post.weightKg != null && ` · ${fmtWeight(post.weightKg, units)}${unitLabel(units)}`}

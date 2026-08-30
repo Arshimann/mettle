@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { useStore } from '../store/useStore';
 import { useSocial } from '../store/useSocial';
-import { fetchRequests } from './social';
+import { fetchRequests, UNKNOWN_NAME } from './social';
 
 /**
  * Where notifications come from.
@@ -39,7 +39,7 @@ export interface AppNotification {
 
 const nameOf = (id: string) => {
   const f = useSocial.getState().friends.find((x) => x.userId === id);
-  return { name: f?.displayName ?? 'Lifter', avatar: f?.avatarUrl ?? null };
+  return { name: f?.displayName ?? UNKNOWN_NAME, avatar: f?.avatarUrl ?? null };
 };
 
 /** Workout context comes from local history — workout_key is HistoryEntry.id,

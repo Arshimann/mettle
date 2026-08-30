@@ -1,3 +1,4 @@
+import { UNKNOWN_NAME } from '../../lib/social';
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Send, Trash2 } from 'lucide-react';
 import { Sheet } from '../../components/ui';
@@ -93,7 +94,7 @@ export function CommentsSheet({
         <div className="space-y-3 mb-1">
           {comments.map((c) => {
             const who = names.get(c.authorId);
-            const name = who?.displayName ?? 'Lifter';
+            const name = who?.displayName ?? UNKNOWN_NAME;
             const canDelete = c.authorId === myId || canModerate;
             return (
               <div key={c.id} className="flex items-start gap-2.5">

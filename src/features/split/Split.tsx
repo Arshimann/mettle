@@ -36,6 +36,7 @@ export function Split() {
   const addExerciseParam = useUI((s) => s.params.addExercise) as string | undefined;
 
   const saveCurrentSplit = useStore((s) => s.saveCurrentSplit);
+  const saveDay = useStore((s) => s.saveDay);
 
   // Arriving from an insight ("side delts are behind — add Lateral Raise")
   // opens the picker straight away, on mount, rather than after a render pass.
@@ -211,6 +212,20 @@ export function Split() {
                           aria-label="Rename day"
                         >
                           <Pencil size={15} />
+                        </button>
+                        {/* Saved immediately: the day already has a name, and the
+                            whole-split flow covers the "call it something else"
+                            case. Fewer taps for the common path. */}
+                        <button
+                          onClick={() => {
+                            haptics.success();
+                            saveDay(day.id);
+                            toast({ message: `Saved “${day.name}”`, tone: 'success' });
+                          }}
+                          className="w-8 h-8 grid place-items-center text-fg-subtle"
+                          aria-label={`Save ${day.name} for reuse`}
+                        >
+                          <Bookmark size={15} />
                         </button>
                         <button
                           onClick={() => {
