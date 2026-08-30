@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Camera, ChevronLeft, Flame, GitCompareArrows, Loader2, Plus, Star, UserMinus } from 'lucide-react';
+import { Award, Camera, ChevronLeft, GitCompareArrows, Loader2, Plus, Star, UserMinus } from 'lucide-react';
+import { StreakFlame } from '../you/StreakFlame';
 import { Button, Card, CardLabel, Sheet } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { listContainer, listItem } from '../../theme/motion';
@@ -182,7 +183,7 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
               {profile.streak > 0 && (
                 <div className="text-center shrink-0">
                   <div className="flex items-center gap-1 text-accent justify-center">
-                    <Flame size={18} fill="currentColor" strokeWidth={0} />
+                    <StreakFlame size={18} />
                     <span className="stat-xl text-[30px]">{profile.streak}</span>
                   </div>
                   <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-subtle mt-0.5">

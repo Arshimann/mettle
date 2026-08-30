@@ -89,14 +89,7 @@ export function Onboarding() {
             >
               {key === 'welcome' && (
                 <motion.div className="text-center" variants={heroContainer} initial="hidden" animate="show">
-                  <motion.div
-                    variants={heroItem}
-                    className="w-16 h-16 rounded-[18px] bg-accent bg-accent-grad text-accent-fg grid place-items-center font-brand font-black text-[34px] mx-auto mb-6 glow-accent"
-                    style={{ fontStretch: '125%' }}
-                  >
-                    {APP_NAME[0]}
-                  </motion.div>
-                  <motion.h1 variants={heroItem} className="wordmark display-hero mb-3">
+                  <motion.h1 variants={heroItem} className="wordmark display-hero mb-3 mt-4">
                     {APP_NAME}
                   </motion.h1>
                   <motion.p variants={heroItem} className="text-lg text-fg-muted leading-snug max-w-[20rem] mx-auto">

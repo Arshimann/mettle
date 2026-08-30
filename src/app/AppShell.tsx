@@ -86,13 +86,12 @@ function Header() {
             }}
             className="flex items-center gap-2"
           >
-            <span
-              className="w-8 h-8 rounded-[10px] bg-accent bg-accent-grad text-accent-fg grid place-items-center glow-accent font-brand font-black text-[16px]"
-              style={{ fontStretch: '125%' }}
-            >
-              {APP_NAME[0]}
+            {/* The lettermark sat directly beside the wordmark, so the M read
+                twice in a row. The name carries the brand on its own; the accent
+                it used to supply moves into the wordmark itself. */}
+            <span className="wordmark text-[19px] leading-none bg-accent bg-accent-grad bg-clip-text text-transparent">
+              {APP_NAME}
             </span>
-            <span className="wordmark text-[16px] leading-none pt-px">{APP_NAME}</span>
           </button>
         )}
 

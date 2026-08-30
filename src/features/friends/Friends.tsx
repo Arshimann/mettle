@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Copy, Flame, Loader2, Pencil, UserPlus, Users, WifiOff, X } from 'lucide-react';
+import { Check, Copy, Loader2, Pencil, UserPlus, Users, WifiOff, X } from 'lucide-react';
+import { StreakFlame } from '../you/StreakFlame';
 import { Button, Card, CardLabel, EmptyState, PageHeader, Segmented } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
@@ -331,7 +332,7 @@ export function Friends() {
                   </div>
                   {f.streak > 0 && (
                     <div className="flex items-center gap-1 text-accent shrink-0">
-                      <Flame size={16} fill="currentColor" strokeWidth={0} />
+                      <StreakFlame size={16} />
                       <span className="text-sm font-bold tabular">{f.streak}</span>
                     </div>
                   )}
