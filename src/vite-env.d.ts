@@ -6,6 +6,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL?: string;
   /** Supabase anon (public) key. Safe to ship in a client app. */
   readonly VITE_SUPABASE_ANON_KEY?: string;
+  /** Canonical public URL, used for links inside auth emails. */
+  readonly VITE_SITE_URL?: string;
 }
 
 interface ImportMeta {

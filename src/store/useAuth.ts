@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { authRedirectUrl } from '../lib/authRedirect';
 import { useStore } from './useStore';
 import { useSocial } from './useSocial';
 import { markLocalChange, pushToCloud, pullFromCloud } from '../lib/sync';
@@ -132,7 +133,13 @@ export const useAuth = create<AuthState>((set, get) => ({
   signUp: async (email, password) => {
     if (!supabase) return { ok: false, message: 'Cloud sync is not set up' };
     set({ error: null });
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // Confirmation links need the same treatment: without this they fall back
+    // to whatever Site URL the Supabase project has, which is localhost by default.
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: authRedirectUrl() },
+    });
     if (error) return { ok: false, message: error.message };
     // Email-confirmation ON → no session yet; user must confirm first.
     if (!data.session) return { ok: true, message: 'Check your email to confirm, then log in.' };
@@ -157,7 +164,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   resetPassword: async (email) => {
     if (!supabase) return { ok: false, message: 'Cloud sync is not set up' };
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: window.location.origin,
+      redirectTo: authRedirectUrl(),
     });
     if (error) return { ok: false, message: error.message };
     // Deliberately the same reply whether or not that address has an account —
