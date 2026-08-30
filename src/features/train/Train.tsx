@@ -8,19 +8,20 @@ import { StallPrompt } from './StallPrompt';
 import { SessionIntro } from './SessionIntro';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
-import { listContainer, listItem, revealBlur, springPop } from '../../theme/motion';
+import { listContainer, listItem, prefersReducedMotion, revealBlur, springPop } from '../../theme/motion';
 import { useStore, type EndSessionResult } from '../../store/useStore';
 import { useSocial } from '../../store/useSocial';
 import { useUI } from '../../store/useUI';
 import { lastPerformance, suggestNextKg } from '../../lib/training';
 import { distanceLabel, fmtWeight, fromKg, loadIncrement, paceLabel, toKm, unitLabel } from '../../lib/units';
 import { sessionVolume, stalledExercises } from '../../lib/formulas';
-import { sfxFanfare, sfxSetDone, sfxSparkle } from '../../lib/sound';
+import { sfxFanfare, sfxPop, sfxSetDone, sfxSparkle } from '../../lib/sound';
 import { quoteForCount } from '../../data/quotes';
 import { fmtDuration } from '../../lib/date';
 import { cardioNames, groupExercises } from '../../lib/exerciseGroups';
 import { RestTimer } from './RestTimer';
 import { FinishSheet } from './FinishSheet';
+import { SendOff } from './SendOff';
 import { ExerciseTools } from './ExerciseTools';
 import { Confetti } from './Confetti';
 import type { WarmupSet } from '../../lib/plates';
@@ -146,6 +147,7 @@ export function Train() {
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [celebration, setCelebration] = useState<EndSessionResult | null>(null);
+  const [sendOff, setSendOff] = useState<EndSessionResult | null>(null);
   const [confirmEndDiscard, setConfirmEndDiscard] = useState(false);
   const [editDayId, setEditDayId] = useState<string | null>(null);
   const [pendingStalls, setPendingStalls] = useState<{ entryId: string; names: string[] } | null>(null);
@@ -199,6 +201,21 @@ export function Train() {
     const id = setInterval(() => setNowTick(Date.now()), 1000);
     return () => clearInterval(id);
   }, [session]);
+
+  // ---- the throw, between saving and the celebration ----
+  if (sendOff) {
+    return (
+      <SendOff
+        result={sendOff}
+        onDone={() => {
+          const r = sendOff;
+          setSendOff(null);
+          announcePost('published', true);
+          setCelebration(r);
+        }}
+      />
+    );
+  }
 
   // ---- celebration overlay (after a PR) ----
   if (celebration) {
@@ -496,23 +513,48 @@ export function Train() {
     }
   };
 
+  /** Say what happened to the workout. Public is announced; private is
+   *  deliberately silent — and offers the one tap that would change it. */
+  const announcePost = (outcome: 'published' | 'private' | 'offline', woosherPlayed: boolean) => {
+    if (outcome === 'offline') return;
+    if (outcome === 'published') {
+      // The send-off already carried the audio; doubling up would just be noise.
+      if (!woosherPlayed) sfxPop();
+      useUI.getState().toast({ message: 'Posted to your friends', tone: 'success' });
+    } else {
+      useUI.getState().toast({
+        message: 'Saved privately — sharing is off',
+        tone: 'neutral',
+        action: { label: 'Settings', onPress: () => navigate('settings', { section: 'social' }) },
+      });
+    }
+  };
+
   const handleConfirmFinish = (meta: { rating?: number; note?: string }) => {
     const result = endSession(meta);
     setFinishOpen(false);
-    // Every saved workout gets the celebration moment — PRs stack on top.
-    if (result) {
-      // Fire-and-forget: friends see the workout without holding up the party.
-      useSocial.getState().publishFinishedWorkout(result.entry, result.prHits);
-      // Anything that just set a PR obviously isn't stalled — only ask about
-      // the rest, and only about lifts in the session we just saved.
-      const logged = new Set(result.entry.exercises.map((e) => e.name.toLowerCase()));
-      const prNames = new Set(result.prHits.map((n) => n.toLowerCase()));
-      const stalled = stalledExercises(useStore.getState().history, { excludeNames: prNames })
-        .filter((n) => logged.has(n.toLowerCase()))
-        .slice(0, 3);
-      setPendingStalls({ entryId: result.entry.id, names: stalled });
+    if (!result) {
+      navigate('home');
+      return;
+    }
+    const outcome = useSocial.getState().publishFinishedWorkout(result.entry, result.prHits);
+    // Anything that just set a PR obviously isn't stalled — only ask about
+    // the rest, and only about lifts in the session we just saved.
+    const logged = new Set(result.entry.exercises.map((e) => e.name.toLowerCase()));
+    const prNames = new Set(result.prHits.map((n) => n.toLowerCase()));
+    const stalled = stalledExercises(useStore.getState().history, { excludeNames: prNames })
+      .filter((n) => logged.has(n.toLowerCase()))
+      .slice(0, 3);
+    setPendingStalls({ entryId: result.entry.id, names: stalled });
+
+    // A workout that actually went out gets thrown; one that stayed private
+    // goes straight to the celebration, because there was nothing to send.
+    if (outcome === 'published' && !prefersReducedMotion()) {
+      setSendOff(result);
+    } else {
+      announcePost(outcome, false);
       setCelebration(result);
-    } else navigate('home');
+    }
   };
 
   return (
