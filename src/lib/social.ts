@@ -344,8 +344,30 @@ export async function fetchRequests(
     // Columns are uid/name/avatar — deliberately distinct from the underlying
     // ones so the SQL function can't hit a name collision.
     type P = { uid: string; name: string | null; avatar: string | null };
-    for (const p of (pending ?? []) as P[]) {
+    const rpcRows = (pending ?? []) as P[];
+    for (const p of rpcRows) {
       if (p.name) names.set(p.uid, { displayName: p.name, avatarUrl: p.avatar });
+    }
+
+    // A placeholder name has three distinct causes and they need different
+    // fixes, so say which one this is rather than leaving it to be guessed:
+    // the RPC erroring (above), the requester never having set a name, or the
+    // RPC declining to return them at all.
+    if (!rpcErr) {
+      const nameless = rpcRows.filter((p) => !p.name).map((p) => p.uid);
+      if (nameless.length > 0) {
+        console.warn(
+          `[social] ${nameless.length} pending request(s) come from accounts with no display name ` +
+            `yet, so they show as "${UNKNOWN_NAME}". They signed up but never finished setting a name.`,
+        );
+      }
+      const unreturned = otherIds.filter((id) => !rpcRows.some((p) => p.uid === id));
+      if (unreturned.length > 0) {
+        console.warn(
+          `[social] pending_request_profiles returned no row for ${unreturned.length} request(s). ` +
+            'That points at the request relationship, not the name — check friend_requests rows match auth.uid().',
+        );
+      }
     }
 
     // Friends we can already read directly — covers anyone the RPC missed.
