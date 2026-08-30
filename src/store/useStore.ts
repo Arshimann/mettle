@@ -20,6 +20,7 @@ import type {
   PlaybookProgress,
   PR,
   Profile,
+  SavedDay,
   SavedSplit,
   Settings,
   SplitDay,
@@ -35,6 +36,7 @@ interface AppData {
   profile: Profile;
   split: SplitDay[];
   savedSplits: SavedSplit[];
+  savedDays: SavedDay[];
   history: HistoryEntry[];
   prs: PR[];
   bodyWeight: BodyWeightEntry[];
@@ -74,6 +76,11 @@ interface AppActions {
   applyTemplate: (days: { name: string; exercises: SplitExercise[] }[], mode?: ApplyMode) => void;
   // saved splits
   saveCurrentSplit: (name: string) => void;
+  /** Snapshot one day so it can be dropped into any future split. */
+  saveDay: (dayId: string, name?: string) => void;
+  deleteSavedDay: (id: string) => void;
+  /** Append only — unlike a whole split there is nothing here to replace. */
+  addSavedDay: (id: string) => void;
   deleteSavedSplit: (id: string) => void;
   applySavedSplit: (id: string, mode?: ApplyMode) => void;
   // session
@@ -146,6 +153,7 @@ const initialData: AppData = {
     soundFx: true,
     trainingStyle: null,
     lastSeenVersion: '',
+    toursSeen: [],
     tabs: { split: true, stretch: true, progress: true, learn: false, friends: true },
     display: {
       stats: true,
@@ -160,9 +168,10 @@ const initialData: AppData = {
       upNext: true,
     },
   },
-  profile: { height: null, age: null, sex: 'male', activity: 'moderate' },
+  profile: { height: null, age: null, sex: 'male', activity: 'moderate', injuries: [] },
   split: [],
   savedSplits: [],
+  savedDays: [],
   history: [],
   prs: [],
   bodyWeight: [],
@@ -238,6 +247,29 @@ export const useStore = create<Store>()(
           ],
         })),
       deleteSavedSplit: (id) => set((s) => ({ savedSplits: s.savedSplits.filter((x) => x.id !== id) })),
+      saveDay: (dayId, name) =>
+        set((s) => {
+          const day = s.split.find((d) => d.id === dayId);
+          if (!day) return {};
+          return {
+            savedDays: [
+              ...s.savedDays,
+              {
+                id: uid(),
+                name: (name ?? day.name).trim() || day.name,
+                savedAt: new Date().toISOString(),
+                exercises: day.exercises,
+              },
+            ],
+          };
+        }),
+      deleteSavedDay: (id) => set((s) => ({ savedDays: s.savedDays.filter((x) => x.id !== id) })),
+      addSavedDay: (id) =>
+        set((s) => {
+          const found = s.savedDays.find((x) => x.id === id);
+          if (!found) return {};
+          return { split: [...s.split, { id: uid(), name: found.name, exercises: found.exercises }] };
+        }),
       applySavedSplit: (id, mode = 'replace') =>
         set((s) => {
           const found = s.savedSplits.find((x) => x.id === id);
@@ -444,6 +476,7 @@ export const useStore = create<Store>()(
           profile: s.profile,
           split: s.split,
           savedSplits: s.savedSplits,
+          savedDays: s.savedDays,
           history: s.history,
           prs: s.prs,
           bodyWeight: s.bodyWeight,
@@ -480,6 +513,7 @@ export const useStore = create<Store>()(
         set((s) => ({
           split: [],
           savedSplits: [],
+          savedDays: [],
           history: [],
           prs: [],
           bodyWeight: [],
@@ -526,12 +560,15 @@ export const useStore = create<Store>()(
         // Older installs stored sex:null, which silently blocked calorie targets.
         // Default it so TDEE always resolves once height + age are set.
         if (profile.sex == null) profile.sex = 'male';
+        // Installs from before v1.3 have no array here at all.
+        if (!Array.isArray(profile.injuries)) profile.injuries = [];
         return {
           ...current,
           ...p,
           settings: {
             ...current.settings,
             ...ps,
+            toursSeen: ps.toursSeen ?? current.settings.toursSeen,
             tabs: { ...current.settings.tabs, ...(ps.tabs ?? {}) },
             systemPair: normalizeSystemPair(ps.systemPair),
             display: { ...current.settings.display, ...(ps.display ?? {}) },
@@ -552,6 +589,7 @@ export const useStore = create<Store>()(
         profile: s.profile,
         split: s.split,
         savedSplits: s.savedSplits,
+        savedDays: s.savedDays,
         history: s.history,
         prs: s.prs,
         bodyWeight: s.bodyWeight,

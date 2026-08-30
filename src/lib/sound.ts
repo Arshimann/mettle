@@ -206,3 +206,87 @@ export function playChime(freq = 880) {
     /* audio unavailable */
   }
 }
+
+/**
+ * One second of white noise, generated once and reused.
+ *
+ * Every other effect here is a stack of oscillator notes, which is right for
+ * chimes and useless for a rush of air — a woosh is filtered noise, not a
+ * pitch. Building the buffer costs a second of Math.random() per call if you
+ * let it, so it is cached on the context that plays it.
+ */
+let noise: AudioBuffer | null = null;
+
+function noiseBuffer(c: AudioContext): AudioBuffer {
+  if (noise && noise.sampleRate === c.sampleRate) return noise;
+  const buf = c.createBuffer(1, c.sampleRate, c.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  noise = buf;
+  return buf;
+}
+
+/**
+ * The long woosh under the send-off: paper leaving your hand.
+ *
+ * The band-pass sweeps up and then back down — a sweep that only rises reads as
+ * a laser, not as something thrown. A second, much quieter high-passed burst on
+ * top is the paper itself; keep it low enough to be texture rather than a
+ * second effect.
+ */
+export const sfxWoosh = () =>
+  fx(
+    'woosh',
+    () => {
+      const c = getCtx();
+      if (!c) return;
+      if (c.state === 'suspended') void c.resume().catch(() => {});
+      const t = c.currentTime;
+      const dur = 0.72;
+
+      const src = c.createBufferSource();
+      src.buffer = noiseBuffer(c);
+      const band = c.createBiquadFilter();
+      band.type = 'bandpass';
+      band.Q.value = 1.2;
+      band.frequency.setValueAtTime(300, t);
+      band.frequency.exponentialRampToValueAtTime(2400, t + dur * 0.55);
+      band.frequency.exponentialRampToValueAtTime(500, t + dur);
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.11, t + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(band);
+      band.connect(g);
+      g.connect(c.destination);
+      src.start(t);
+      src.stop(t + dur + 0.02);
+      src.onended = () => {
+        src.disconnect();
+        band.disconnect();
+        g.disconnect();
+      };
+
+      // The paper rustle — short, bright, and almost subliminal.
+      const rustle = c.createBufferSource();
+      rustle.buffer = noiseBuffer(c);
+      const hp = c.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 3000;
+      const rg = c.createGain();
+      rg.gain.setValueAtTime(0.0001, t);
+      rg.gain.exponentialRampToValueAtTime(0.03, t + 0.02);
+      rg.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+      rustle.connect(hp);
+      hp.connect(rg);
+      rg.connect(c.destination);
+      rustle.start(t);
+      rustle.stop(t + 0.16);
+      rustle.onended = () => {
+        rustle.disconnect();
+        hp.disconnect();
+        rg.disconnect();
+      };
+    },
+    900,
+  );

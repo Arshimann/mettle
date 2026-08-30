@@ -69,3 +69,19 @@ export const pulseOnce = {
   },
   transition: { duration: 0.6, ease: easeOut },
 };
+
+/**
+ * True when the OS asks for less motion.
+ *
+ * Read at render rather than subscribed to: the setting effectively never
+ * changes mid-session, and a listener on every animated surface costs more than
+ * it buys. Reduced motion must still let the *outcome* happen — the toast
+ * appears, the workout posts, the flame shows — it just arrives without travel.
+ */
+export function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}

@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { Download, Smartphone, Upload, Trash2 } from 'lucide-react';
+import { ChevronDown, Download, Search, Smartphone, Upload, Trash2 } from 'lucide-react';
 import { APP_NAME, APP_TAGLINE, SCHEMA_VERSION } from '../../config';
-import { Button, Card, Segmented, Switch } from '../../components/ui';
+import { Button, Card, CardLabel, Segmented, Switch } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { isStandalone } from '../../lib/platform';
 import { useStore } from '../../store/useStore';
@@ -14,6 +14,87 @@ import { SyncSection } from './SyncSection';
 import { ProfileSection } from './ProfileSection';
 import type { SettingsSectionId } from './sections';
 import type { DisplayToggles, TabToggles } from '../../types';
+import { FAQ } from '../../data/faq';
+import { TOURS, type TourId } from '../../data/tours';
+import { cn } from '../../lib/cn';
+
+/** Searchable questions, each answer ending on the screen that fixes it. */
+function Faq() {
+  const navigate = useUI((s) => s.navigate);
+  const [q, setQ] = useState('');
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const needle = q.trim().toLowerCase();
+  const shown = needle
+    ? FAQ.filter(
+        (e) =>
+          e.q.toLowerCase().includes(needle) ||
+          e.a.toLowerCase().includes(needle) ||
+          (e.keywords ?? []).some((k) => k.includes(needle)),
+      )
+    : FAQ;
+
+  return (
+    <Card>
+      <CardLabel>Questions</CardLabel>
+      <div className="relative mb-2.5">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-subtle" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search help…"
+          aria-label="Search help"
+          className="w-full h-11 pl-9 pr-3 rounded-btn bg-surface-2 border border-border text-[15px] outline-none focus:border-border-strong"
+        />
+      </div>
+
+      <div className="divide-y divide-border">
+        {shown.map((e) => {
+          const open = openId === e.id;
+          return (
+            <div key={e.id}>
+              <button
+                onClick={() => {
+                  haptics.tap();
+                  // One at a time: twenty expanded answers is the wall of text
+                  // this is meant to replace.
+                  setOpenId(open ? null : e.id);
+                }}
+                aria-expanded={open}
+                className="w-full flex items-center gap-2 text-left py-3"
+              >
+                <span className="flex-1 text-[14.5px] font-medium">{e.q}</span>
+                <ChevronDown
+                  size={15}
+                  className={cn('text-fg-subtle shrink-0 transition-transform', open && 'rotate-180')}
+                />
+              </button>
+              {open && (
+                <div className="pb-3.5 -mt-0.5">
+                  <p className="text-[14px] text-fg-muted leading-relaxed">{e.a}</p>
+                  {e.go && (
+                    <button
+                      onClick={() => {
+                        haptics.select();
+                        navigate(e.go!.screen, e.go!.params);
+                      }}
+                      className="mt-2.5 text-[13px] font-semibold text-accent"
+                    >
+                      {e.go.label} →
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {shown.length === 0 && (
+          <div className="text-sm text-fg-muted py-4">No answer for that yet.</div>
+        )}
+      </div>
+    </Card>
+  );
+}
 
 function Row({ label, desc, control }: { label: string; desc?: string; control: ReactNode }) {
   return (
@@ -73,21 +154,19 @@ export function Settings() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useUI((s) => s.toast);
 
-  const flash = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2200);
-  };
+  const flash = (msg: string, tone: 'neutral' | 'success' | 'danger' = 'neutral') =>
+    toast({ message: msg, tone });
 
   const onImportFile = async (file: File) => {
     const text = await file.text();
     if (importData(text)) {
       haptics.success();
-      flash('Data imported');
+      flash('Data imported', 'success');
     } else {
       haptics.warn();
-      flash('Could not read that file');
+      flash('Could not read that file', 'danger');
     }
   };
 
@@ -267,7 +346,7 @@ export function Settings() {
             <Button
               onClick={() => {
                 download(`mettle-backup-${new Date().toISOString().slice(0, 10)}.json`, exportData());
-                flash('Backup downloaded');
+                flash('Backup downloaded', 'success');
               }}
             >
               <Download size={16} /> Export
@@ -300,7 +379,7 @@ export function Settings() {
               useSocial.getState().wipePublished();
               setConfirmReset(false);
               haptics.warn();
-              flash('All workout data cleared');
+              flash('All workout data cleared', 'danger');
             }}
           >
             <Trash2 size={16} /> {confirmReset ? 'Tap again to confirm' : 'Reset all data'}
@@ -310,6 +389,7 @@ export function Settings() {
 
       {section === 'about' && (
         <>
+          <Faq />
           <Card>
             <div className="wordmark text-2xl">{APP_NAME}</div>
             <div className="text-sm text-fg-muted">{APP_TAGLINE}</div>
@@ -337,14 +417,49 @@ export function Settings() {
               </Button>
             </Card>
           )}
+          <Card>
+            <CardLabel>Guided tours</CardLabel>
+            <p className="text-sm text-fg-muted leading-relaxed mb-3">
+              Walk through the app again whenever you like.
+            </p>
+            <div className="space-y-2">
+              {(
+                [
+                  ['welcome', 'Around the app', 'The five screens and what each is for'],
+                  ['first-lift', 'Logging a workout', 'Every control on the Train screen'],
+                ] as [TourId, string, string][]
+              ).map(([id, label, desc]) => (
+                <div key={id} className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-[15px]">{label}</div>
+                    <div className="text-xs text-fg-muted mt-0.5">{desc}</div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      haptics.tap();
+                      // Clear the seen mark so it can run again, then start it.
+                      updateSettings({
+                        toursSeen: (settings.toursSeen ?? []).filter((t) => t !== id),
+                      });
+                      useUI.getState().navigate(id === 'first-lift' ? 'train' : 'home');
+                      useUI.getState().startTour(id);
+                    }}
+                    disabled={!TOURS[id]}
+                  >
+                    Replay
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-fg-subtle mt-3 leading-snug">
+              Logging a workout points at the Train screen’s controls, so start a session first if
+              you want the spotlights to land.
+            </p>
+          </Card>
+
           <InstallSheet open={installOpen} onClose={() => setInstallOpen(false)} />
         </>
-      )}
-
-      {toast && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-[100px] z-50 bg-fg text-canvas text-sm font-medium px-4 py-2.5 rounded-btn shadow-pop">
-          {toast}
-        </div>
       )}
     </div>
   );

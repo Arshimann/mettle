@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Camera, ChevronLeft, Flame, GitCompareArrows, Loader2, Plus, Star, UserMinus } from 'lucide-react';
+import { Award, Camera, ChevronLeft, GitCompareArrows, Loader2, Plus, Star, UserMinus } from 'lucide-react';
+import { StreakFlame } from '../you/StreakFlame';
 import { Button, Card, CardLabel, Sheet } from '../../components/ui';
 import { haptics } from '../../lib/haptics';
 import { listContainer, listItem } from '../../theme/motion';
@@ -19,6 +20,7 @@ import {
   setReaction,
 } from '../../lib/social';
 import { useSocial } from '../../store/useSocial';
+import { useUI } from '../../store/useUI';
 import { useStore } from '../../store/useStore';
 import { EXERCISE_LIBRARY } from '../../data/exercises';
 import type { FriendProfileData, FriendWorkout, WorkoutReaction } from '../../types/social';
@@ -55,7 +57,9 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
   const [checkIns, setCheckIns] = useState<PhysiquePost[]>([]);
   const [photo, setPhoto] = useState<PhysiquePost | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  // Second gate inside the sheet. Removing someone is not reversible from here.
+  const [confirmFinal, setConfirmFinal] = useState(false);
+  const toast = useUI((s) => s.toast);
 
   const loadReactions = useCallback(
     async (keys: string[]) => {
@@ -94,10 +98,7 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
     };
   }, [friendId, loadReactions]);
 
-  const flash = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2200);
-  };
+  const flash = (msg: string) => toast({ message: msg, tone: 'neutral' });
 
   // Their check-in thumbnails live in a private bucket, so they need signing.
   const checkInUrls = useSignedUrls(checkIns.map((c) => c.thumbPath));
@@ -184,7 +185,7 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
               {profile.streak > 0 && (
                 <div className="text-center shrink-0">
                   <div className="flex items-center gap-1 text-accent justify-center">
-                    <Flame size={18} fill="currentColor" strokeWidth={0} />
+                    <StreakFlame size={18} />
                     <span className="stat-xl text-[30px]">{profile.streak}</span>
                   </div>
                   <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-subtle mt-0.5">
@@ -275,7 +276,8 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
               </div>
             </Card>
           </motion.div>
-        )}
+        )}
+
         {/* check-ins */}
         <motion.div variants={listItem} className="space-y-2.5">
           <CardLabel className="mb-0 px-0.5">Check-ins</CardLabel>
@@ -369,7 +371,14 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
       </motion.div>
 
       {/* Removing a friend is not reversible from here — say what it costs. */}
-      <Sheet open={confirmRemove} onClose={() => setConfirmRemove(false)} title="Remove friend?">
+      <Sheet
+        open={confirmRemove}
+        onClose={() => {
+          setConfirmRemove(false);
+          setConfirmFinal(false);
+        }}
+        title="Remove friend?"
+      >
         <p className="text-sm text-fg-muted leading-relaxed -mt-1">
           Are you sure you want to remove <span className="text-fg font-semibold">{profile.displayName}</span>?
           They’ll no longer be able to see your progress — your workouts, streak, PRs and any check-ins
@@ -383,12 +392,31 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
             variant="danger"
             fullWidth
             onClick={() => {
+              // Four seconds rather than three: the actions that affect another
+              // person get the longer window, same as the physique photos.
+              if (!confirmFinal) {
+                setConfirmFinal(true);
+                haptics.warn();
+                setTimeout(() => setConfirmFinal(false), 4000);
+                return;
+              }
               haptics.warn();
               setConfirmRemove(false);
-              void unfriend(friendId).then(onBack);
+              setConfirmFinal(false);
+              const name = profile.displayName;
+              void unfriend(friendId).then(() => {
+                useUI.getState().toast({ message: `Removed ${name}`, tone: 'danger' });
+                onBack();
+              });
             }}
           >
-            <UserMinus size={16} /> Remove
+            {confirmFinal ? (
+              'Tap again — this removes them'
+            ) : (
+              <>
+                <UserMinus size={16} /> Remove
+              </>
+            )}
           </Button>
         </div>
       </Sheet>
@@ -430,12 +458,6 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
             remove: (id) => deleteComment(id),
           }}
         />
-      )}
-
-      {toast && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-[100px] z-50 bg-fg text-canvas text-sm font-medium px-4 py-2.5 rounded-btn shadow-pop">
-          {toast}
-        </div>
       )}
     </div>
   );

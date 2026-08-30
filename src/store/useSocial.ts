@@ -19,6 +19,10 @@ import { useNotifications, notifyFriendTraining } from './useNotifications';
  * this store holds only the roster, requests, presence, and my identity.
  */
 
+/** 'offline' covers signed-out and unconfigured builds: say nothing rather
+ *  than claim a privacy guarantee we are not the ones enforcing. */
+export type PublishOutcome = 'published' | 'private' | 'offline';
+
 interface SocialState {
   userId: string | null;
   ready: boolean;
@@ -37,8 +41,10 @@ interface SocialState {
   ensurePresence: () => void;
   /** Re-upload my snapshot (streak/PRs/customs) — cheap, fire-and-forget. */
   republish: () => void;
-  /** Publish a just-finished workout + refreshed snapshot. */
-  publishFinishedWorkout: (entry: HistoryEntry, prHits: string[]) => void;
+  /** Publish a just-finished workout + refreshed snapshot. Reports what
+   *  actually happened so the UI can say so — silence about whether a session
+   *  went out to your friends is a trust problem in a fitness app. */
+  publishFinishedWorkout: (entry: HistoryEntry, prHits: string[]) => PublishOutcome;
   /** Wipe everything I've published (reset data). */
   wipePublished: () => void;
 
@@ -135,9 +141,11 @@ export const useSocial = create<SocialState>((set, get) => ({
 
   publishFinishedWorkout: (entry, prHits) => {
     const { userId, myShared } = get();
-    if (!userId || !myShared) return;
-    if (myShared.privacy.shareWorkouts) void social.publishWorkout(userId, entry, prHits);
+    if (!userId || !myShared) return 'offline';
+    const shared = myShared.privacy.shareWorkouts;
+    if (shared) void social.publishWorkout(userId, entry, prHits);
     void social.publishSharedProfile(userId, myShared.privacy);
+    return shared ? 'published' : 'private';
   },
 
   wipePublished: () => {

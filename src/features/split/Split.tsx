@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DndContext,
   KeyboardSensor,
@@ -14,7 +14,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Bookmark, Dumbbell, GripVertical, LayoutGrid, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowLeftRight, Bookmark, Dumbbell, GripVertical, LayoutGrid, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { Button, Card, EmptyState, PageHeader, Sheet, Sortable, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { TemplateBrowser } from './TemplateBrowser';
@@ -36,6 +36,7 @@ export function Split() {
   const addExerciseParam = useUI((s) => s.params.addExercise) as string | undefined;
 
   const saveCurrentSplit = useStore((s) => s.saveCurrentSplit);
+  const saveDay = useStore((s) => s.saveDay);
 
   // Arriving from an insight ("side delts are behind — add Lateral Raise")
   // opens the picker straight away, on mount, rather than after a render pass.
@@ -47,10 +48,14 @@ export function Split() {
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [quizOpen, setQuizOpen] = useState(false);
   const [presetName, setPresetName] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(
-    () => (addExerciseParam ? `Add ${addExerciseParam} to a day` : null),
-  );
+  const toast = useUI((s) => s.toast);
   const [targetSheet, setTargetSheet] = useState<{ dayId: string; idx: number; name: string; sets: string; reps: string } | null>(null);
+  const [replaceFor, setReplaceFor] = useState<{ dayId: string; idx: number; name: string } | null>(null);
+
+  // Arriving from an insight ("side delts are behind") announces what to do.
+  useEffect(() => {
+    if (addExerciseParam) toast({ message: `Add ${addExerciseParam} to a day`, tone: 'neutral' });
+  }, [addExerciseParam, toast]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -116,8 +121,19 @@ export function Split() {
     saveCurrentSplit(name);
     haptics.success();
     setPresetName(null);
-    setToast(`Saved “${name}”`);
-    setTimeout(() => setToast(null), 2400);
+    toast({ message: `Saved “${name}”`, tone: 'success' });
+  };
+
+  /** Swap the movement in a planned slot. Unlike mid-session, the targets stay:
+   *  the slot is what persists, and those numbers were planned for it. */
+  const replaceExercise = (dayId: string, idx: number, name: string) => {
+    const day = dayOf(dayId);
+    if (!day) return;
+    if (day.exercises.some((e, i) => i !== idx && e.name.toLowerCase() === name.toLowerCase())) return;
+    updateDay(dayId, {
+      exercises: day.exercises.map((x, i) => (i !== idx ? x : { ...x, name })),
+    });
+    toast({ message: `Swapped to ${name}`, tone: 'success' });
   };
 
   const removeExercise = (dayId: string, idx: number) => {
@@ -197,6 +213,20 @@ export function Split() {
                         >
                           <Pencil size={15} />
                         </button>
+                        {/* Saved immediately: the day already has a name, and the
+                            whole-split flow covers the "call it something else"
+                            case. Fewer taps for the common path. */}
+                        <button
+                          onClick={() => {
+                            haptics.success();
+                            saveDay(day.id);
+                            toast({ message: `Saved “${day.name}”`, tone: 'success' });
+                          }}
+                          className="w-8 h-8 grid place-items-center text-fg-subtle"
+                          aria-label={`Save ${day.name} for reuse`}
+                        >
+                          <Bookmark size={15} />
+                        </button>
                         <button
                           onClick={() => {
                             if (confirmDelete === day.id) {
@@ -263,6 +293,16 @@ export function Split() {
                                           </span>
                                         </button>
                                         <button
+                                          onClick={() => {
+                                            haptics.tap();
+                                            setReplaceFor({ dayId: day.id, idx, name: ex.name });
+                                          }}
+                                          className="w-7 h-7 grid place-items-center text-fg-subtle shrink-0"
+                                          aria-label={`Swap ${ex.name}`}
+                                        >
+                                          <ArrowLeftRight size={14} />
+                                        </button>
+                                        <button
                                           onClick={() => removeExercise(day.id, idx)}
                                           className="w-7 h-7 grid place-items-center text-fg-subtle shrink-0"
                                           aria-label={`Remove ${ex.name}`}
@@ -296,6 +336,19 @@ export function Split() {
         onClose={() => setPickerForDay(null)}
         onPick={addExerciseToDay}
         exclude={pickerDay?.exercises.map((e) => e.name) ?? []}
+      />
+
+      <ExercisePicker
+        open={replaceFor != null}
+        onClose={() => setReplaceFor(null)}
+        mode="replace"
+        replacing={replaceFor?.name}
+        onPick={(name) => {
+          if (!replaceFor) return;
+          replaceExercise(replaceFor.dayId, replaceFor.idx, name);
+          setReplaceFor(null);
+        }}
+        exclude={replaceFor ? (dayOf(replaceFor.dayId)?.exercises.map((e) => e.name) ?? []) : []}
       />
 
       {/* Per-exercise target editor: sets × reps used to pre-build the logger. */}
@@ -368,12 +421,6 @@ export function Split() {
           Save preset
         </Button>
       </Sheet>
-
-      {toast && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-[110px] z-50 bg-fg text-canvas text-sm font-medium px-4 py-2.5 rounded-btn shadow-pop">
-          {toast}
-        </div>
-      )}
 
       <Sheet open={!!nameSheet} onClose={() => setNameSheet(null)} title={nameSheet?.id ? 'Rename day' : 'New day'}>
         <input

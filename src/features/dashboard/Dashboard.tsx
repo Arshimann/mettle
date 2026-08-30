@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { ChevronRight, Dumbbell, Flame, Moon, Play, Plus, Snowflake } from 'lucide-react';
+import { ChevronRight, Dumbbell, Moon, Play, Plus, Snowflake } from 'lucide-react';
+import { StreakFlame } from '../you/StreakFlame';
 import { Button, Card, CardLabel, CountUp } from '../../components/ui';
 import { heroContainer, heroItem, listItem, spring } from '../../theme/motion';
 import { useStore } from '../../store/useStore';
@@ -94,7 +95,7 @@ export function Dashboard() {
               style={{ background: 'radial-gradient(ellipse 70% 130% at 10% 50%, var(--accent-soft), transparent 60%)' }}
             />
             <div className="relative w-12 h-12 rounded-full bg-accent-soft grid place-items-center text-accent shrink-0">
-              <Flame size={24} fill="currentColor" strokeWidth={0} />
+              <StreakFlame size={24} />
             </div>
             <div className="relative min-w-0">
               <div className="stat-xl">

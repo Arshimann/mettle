@@ -57,9 +57,18 @@ export function shortDate(iso: string): string {
   return fromISO(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/**
+ * Elapsed time, in the largest unit that applies.
+ *
+ * Minutes and seconds are zero-padded once a bigger unit precedes them, so a
+ * live clock keeps its width instead of jumping as it ticks — this is rendered
+ * at 34px on the Train screen and re-renders every second.
+ */
 export function fmtDuration(sec: number): string {
-  const m = Math.floor(sec / 60);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor(sec / 60) % 60;
   const s = sec % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
   if (m === 0) return `${s}s`;
   return `${m}m ${String(s).padStart(2, '0')}s`;
 }

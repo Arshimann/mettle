@@ -14,6 +14,9 @@ import { Screen } from './Screen';
 import { UpdatePrompt } from '../features/system/UpdatePrompt';
 import { WhatsNew } from '../features/system/WhatsNew';
 import { AchievementUnlock } from '../features/system/AchievementUnlock';
+import { Toaster } from '../features/system/Toaster';
+import { CoachMarks } from '../features/system/CoachMarks';
+import { TOURS, type TourId } from '../data/tours';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { Split } from '../features/split/Split';
 import { Train } from '../features/train/Train';
@@ -85,13 +88,12 @@ function Header() {
             }}
             className="flex items-center gap-2"
           >
-            <span
-              className="w-8 h-8 rounded-[10px] bg-accent bg-accent-grad text-accent-fg grid place-items-center glow-accent font-brand font-black text-[16px]"
-              style={{ fontStretch: '125%' }}
-            >
-              {APP_NAME[0]}
+            {/* The lettermark sat directly beside the wordmark, so the M read
+                twice in a row. The name carries the brand on its own; the accent
+                it used to supply moves into the wordmark itself. */}
+            <span className="wordmark text-[19px] leading-none bg-accent bg-accent-grad bg-clip-text text-transparent">
+              {APP_NAME}
             </span>
-            <span className="wordmark text-[16px] leading-none pt-px">{APP_NAME}</span>
           </button>
         )}
 
@@ -156,6 +158,29 @@ function Header() {
   );
 }
 
+/** Runs whichever tour is pending and records it as seen — completed or
+ *  skipped alike, because replaying one against someone's will is worse than
+ *  them missing it. */
+function TourHost() {
+  const tour = useUI((s) => s.tour);
+  const endTour = useUI((s) => s.endTour);
+  const toursSeen = useStore((s) => s.settings.toursSeen ?? []);
+  const updateSettings = useStore((s) => s.updateSettings);
+
+  const steps = tour ? TOURS[tour as TourId] : undefined;
+  if (!tour || !steps) return null;
+
+  return (
+    <CoachMarks
+      steps={steps}
+      onDone={() => {
+        if (!toursSeen.includes(tour)) updateSettings({ toursSeen: [...toursSeen, tour] });
+        endTour();
+      }}
+    />
+  );
+}
+
 export function AppShell() {
   const screen = useUI((s) => s.screen);
   const navigate = useUI((s) => s.navigate);
@@ -212,6 +237,8 @@ export function AppShell() {
       <WhatsNew />
 
       <AchievementUnlock />
+      <Toaster />
+      <TourHost />
     </div>
   );
 }

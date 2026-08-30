@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import type { ComponentType } from 'react';
 import { PageHeader } from '../../components/ui';
 import { listContainer, listItem } from '../../theme/motion';
+import { Account } from './Account';
 import { BodyWeight } from './BodyWeight';
 import { MyPhysique } from '../physique/MyPhysique';
 import { Goals } from './Goals';
@@ -16,7 +17,7 @@ import { Stopwatch } from './Stopwatch';
 /** Grouped so the screen reads as a few calm sections instead of one long
  *  stack of equal-weight cards. Pure utilities live last under "Tools". */
 const SECTIONS: { title: string; cards: ComponentType[] }[] = [
-  { title: 'Body', cards: [BodyWeight, MyPhysique, Consistency, Coach] },
+  { title: 'Body', cards: [Account, BodyWeight, MyPhysique, Consistency, Coach] },
   { title: 'Goals & habits', cards: [Goals, TrainingStyleCard, Supplements, Achievements] },
   { title: 'Tools', cards: [OneRm, Stopwatch] },
 ];

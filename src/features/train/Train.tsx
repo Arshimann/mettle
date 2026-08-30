@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Calculator, Check, ChevronRight, Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeftRight, Award, Calculator, Check, ChevronDown, ChevronRight, Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, PageHeader, PressableCard, Sheet, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { EditDaySheet } from './EditDaySheet';
@@ -8,19 +8,20 @@ import { StallPrompt } from './StallPrompt';
 import { SessionIntro } from './SessionIntro';
 import { cn } from '../../lib/cn';
 import { haptics } from '../../lib/haptics';
-import { listContainer, listItem, revealBlur, springPop } from '../../theme/motion';
+import { listContainer, listItem, prefersReducedMotion, revealBlur, springPop } from '../../theme/motion';
 import { useStore, type EndSessionResult } from '../../store/useStore';
 import { useSocial } from '../../store/useSocial';
 import { useUI } from '../../store/useUI';
 import { lastPerformance, suggestNextKg } from '../../lib/training';
 import { distanceLabel, fmtWeight, fromKg, loadIncrement, paceLabel, toKm, unitLabel } from '../../lib/units';
 import { sessionVolume, stalledExercises } from '../../lib/formulas';
-import { sfxFanfare, sfxSetDone, sfxSparkle } from '../../lib/sound';
+import { sfxFanfare, sfxPop, sfxSetDone, sfxSparkle } from '../../lib/sound';
 import { quoteForCount } from '../../data/quotes';
-import { EXERCISE_LIBRARY } from '../../data/exercises';
 import { fmtDuration } from '../../lib/date';
+import { cardioNames, groupExercises } from '../../lib/exerciseGroups';
 import { RestTimer } from './RestTimer';
 import { FinishSheet } from './FinishSheet';
+import { SendOff } from './SendOff';
 import { ExerciseTools } from './ExerciseTools';
 import { Confetti } from './Confetti';
 import type { WarmupSet } from '../../lib/plates';
@@ -142,9 +143,11 @@ export function Train() {
   const navigate = useUI((s) => s.navigate);
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [replacingEi, setReplacingEi] = useState<number | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [celebration, setCelebration] = useState<EndSessionResult | null>(null);
+  const [sendOff, setSendOff] = useState<EndSessionResult | null>(null);
   const [confirmEndDiscard, setConfirmEndDiscard] = useState(false);
   const [editDayId, setEditDayId] = useState<string | null>(null);
   const [pendingStalls, setPendingStalls] = useState<{ entryId: string; names: string[] } | null>(null);
@@ -168,22 +171,61 @@ export function Train() {
   };
   const [tools, setTools] = useState<{ ei: number; name: string; target: number } | null>(null);
   const [flashReps, setFlashReps] = useState<{ ei: number; si: number } | null>(null);
+  // Only ever holds an explicit choice. Unset means "follow the default", which
+  // is what makes a finished group fold itself away without a syncing effect —
+  // and once you reopen one, the stored `false` keeps it open.
+  // Per-session by design: a group left collapsed across a reload would hide
+  // work you still have to do.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [nowTick, setNowTick] = useState(() => Date.now());
 
   // Cardio exercises log minutes/distance instead of weight×reps.
   const customExercises = useStore((s) => s.customExercises);
-  const cardioNames = useMemo(() => {
-    const set = new Set<string>();
-    EXERCISE_LIBRARY.forEach((e) => { if (e.group === 'Cardio') set.add(e.name.toLowerCase()); });
-    customExercises.forEach((e) => { if (e.group === 'Cardio') set.add(e.name.toLowerCase()); });
-    return set;
-  }, [customExercises]);
+  const cardio = useMemo(() => cardioNames(customExercises), [customExercises]);
+
+  // Rows carry their index in session.exercises. Every mutation on this screen
+  // is index-based, so grouping must not renumber anything — bucket the pairs,
+  // never the exercises alone.
+  const grouped = useMemo(
+    () =>
+      groupExercises(
+        (session?.exercises ?? []).map((ex, ei) => ({ ex, ei })),
+        (row) => row.ex.name,
+        customExercises,
+      ),
+    [session?.exercises, customExercises],
+  );
 
   useEffect(() => {
     if (!session) return;
     const id = setInterval(() => setNowTick(Date.now()), 1000);
     return () => clearInterval(id);
   }, [session]);
+
+  // The very first workout, not merely the first visit to this tab. Waits for
+  // the intro to clear so the spotlight lands on a settled screen.
+  const toursSeen = useStore((s) => s.settings.toursSeen ?? []);
+  const historyCount = history.length;
+  useEffect(() => {
+    if (!session || intro || historyCount > 0 || toursSeen.includes('first-lift')) return;
+    const t = setTimeout(() => useUI.getState().startTour('first-lift'), 600);
+    return () => clearTimeout(t);
+  }, [session, intro, historyCount, toursSeen]);
+
+  // ---- the throw, between saving and the celebration ----
+  if (sendOff) {
+    return (
+      <SendOff
+        result={sendOff}
+        onDone={() => {
+          const r = sendOff;
+          setSendOff(null);
+          announcePost('published', true);
+          setCelebration(r);
+        }}
+      />
+    );
+  }
 
   // ---- celebration overlay (after a PR) ----
   if (celebration) {
@@ -366,8 +408,37 @@ export function Train() {
       ),
     }));
 
-  const removeExercise = (ei: number) =>
+  const removeExercise = (ei: number) => {
+    const removed = session.exercises[ei];
+    if (!removed) return;
     update((s) => ({ ...s, exercises: s.exercises.filter((_, i) => i !== ei) }));
+    haptics.warn();
+    // Sets may already be logged against it, so a mis-tap on the bin is a real
+    // loss. The row is right here — offering it back costs nothing.
+    useUI.getState().toast({
+      message: `${removed.name} removed`,
+      tone: 'danger',
+      action: {
+        label: 'Undo',
+        onPress: () =>
+          update((s) => ({
+            ...s,
+            exercises: [...s.exercises.slice(0, ei), removed, ...s.exercises.slice(ei)],
+          })),
+      },
+    });
+  };
+
+  /** Swap the movement, keep the sets. The "Last ..." line and the suggested
+   *  load are derived from history by name, so they re-resolve on the next
+   *  render — but targetReps came from the split and described the old lift. */
+  const replaceExercise = (ei: number, name: string) =>
+    update((s) => ({
+      ...s,
+      exercises: s.exercises.map((ex, i) =>
+        i !== ei ? ex : { ...ex, name, targetReps: undefined },
+      ),
+    }));
 
   const addExercise = (name: string) =>
     update((s) => ({ ...s, exercises: [...s.exercises, { name, sets: [{ weight: '', reps: '', done: false }] }] }));
@@ -396,7 +467,7 @@ export function Train() {
     const cur = exercise?.sets[si];
     if (!cur) return;
     const becameDone = !cur.done;
-    const isCardio = cardioNames.has(exercise.name.toLowerCase());
+    const isCardio = cardio.has(exercise.name.toLowerCase());
 
     // Honest logging: cardio needs real minutes, to-failure needs real reps —
     // block completion and flag the field instead of guessing.
@@ -452,23 +523,48 @@ export function Train() {
     }
   };
 
+  /** Say what happened to the workout. Public is announced; private is
+   *  deliberately silent — and offers the one tap that would change it. */
+  const announcePost = (outcome: 'published' | 'private' | 'offline', woosherPlayed: boolean) => {
+    if (outcome === 'offline') return;
+    if (outcome === 'published') {
+      // The send-off already carried the audio; doubling up would just be noise.
+      if (!woosherPlayed) sfxPop();
+      useUI.getState().toast({ message: 'Posted to your friends', tone: 'success' });
+    } else {
+      useUI.getState().toast({
+        message: 'Saved privately — sharing is off',
+        tone: 'neutral',
+        action: { label: 'Settings', onPress: () => navigate('settings', { section: 'social' }) },
+      });
+    }
+  };
+
   const handleConfirmFinish = (meta: { rating?: number; note?: string }) => {
     const result = endSession(meta);
     setFinishOpen(false);
-    // Every saved workout gets the celebration moment — PRs stack on top.
-    if (result) {
-      // Fire-and-forget: friends see the workout without holding up the party.
-      useSocial.getState().publishFinishedWorkout(result.entry, result.prHits);
-      // Anything that just set a PR obviously isn't stalled — only ask about
-      // the rest, and only about lifts in the session we just saved.
-      const logged = new Set(result.entry.exercises.map((e) => e.name.toLowerCase()));
-      const prNames = new Set(result.prHits.map((n) => n.toLowerCase()));
-      const stalled = stalledExercises(useStore.getState().history, { excludeNames: prNames })
-        .filter((n) => logged.has(n.toLowerCase()))
-        .slice(0, 3);
-      setPendingStalls({ entryId: result.entry.id, names: stalled });
+    if (!result) {
+      navigate('home');
+      return;
+    }
+    const outcome = useSocial.getState().publishFinishedWorkout(result.entry, result.prHits);
+    // Anything that just set a PR obviously isn't stalled — only ask about
+    // the rest, and only about lifts in the session we just saved.
+    const logged = new Set(result.entry.exercises.map((e) => e.name.toLowerCase()));
+    const prNames = new Set(result.prHits.map((n) => n.toLowerCase()));
+    const stalled = stalledExercises(useStore.getState().history, { excludeNames: prNames })
+      .filter((n) => logged.has(n.toLowerCase()))
+      .slice(0, 3);
+    setPendingStalls({ entryId: result.entry.id, names: stalled });
+
+    // A workout that actually went out gets thrown; one that stayed private
+    // goes straight to the celebration, because there was nothing to send.
+    if (outcome === 'published' && !prefersReducedMotion()) {
+      setSendOff(result);
+    } else {
+      announcePost(outcome, false);
       setCelebration(result);
-    } else navigate('home');
+    }
   };
 
   return (
@@ -491,9 +587,42 @@ export function Train() {
         </div>
       </Card>
 
-      <div className="space-y-3">
-        {session.exercises.map((ex, ei) => {
-          const isCardio = cardioNames.has(ex.name.toLowerCase());
+      <div className="space-y-5">
+        {grouped.map(({ group, items }) => {
+          const groupSets = items.reduce((n, r) => n + r.ex.sets.length, 0);
+          const groupDone = items.reduce((n, r) => n + r.ex.sets.filter((st) => st.done).length, 0);
+          const complete = groupSets > 0 && groupDone === groupSets;
+          // Default: a group with every set ticked gets out of the way.
+          const isShut = collapsed[group] ?? complete;
+          return (
+            <div key={group}>
+              <button
+                onClick={() => {
+                  haptics.tap();
+                  setCollapsed((c) => ({ ...c, [group]: !isShut }));
+                }}
+                aria-expanded={!isShut}
+                className="w-full flex items-center gap-2 px-0.5 pb-2"
+              >
+                <ChevronDown
+                  size={13}
+                  className={cn(
+                    'text-fg-subtle transition-transform shrink-0',
+                    isShut && '-rotate-90',
+                  )}
+                />
+                <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-fg-subtle">
+                  {group}
+                </span>
+                {complete && <Check size={13} className="text-accent shrink-0" strokeWidth={3} />}
+                <span className="ml-auto text-[11px] font-semibold text-fg-subtle tabular">
+                  {groupDone}/{groupSets} sets
+                </span>
+              </button>
+              {!isShut && (
+                <div className="space-y-3">
+                  {items.map(({ ex, ei }) => {
+          const isCardio = cardio.has(ex.name.toLowerCase());
           const lp = isCardio ? null : lastPerformance(history, ex.name);
           const suggestKg = isCardio ? null : suggestNextKg(history, ex.name, units);
           const weightPlaceholder = suggestKg != null ? String(fmtWeight(suggestKg, units)) : '0';
@@ -551,7 +680,14 @@ export function Train() {
                     </button>
                   )}
                   <button
-                    onClick={() => { haptics.tap(); removeExercise(ei); }}
+                    onClick={() => { haptics.tap(); setReplacingEi(ei); }}
+                    className="w-8 h-8 grid place-items-center text-fg-subtle"
+                    aria-label={`Swap ${ex.name}`}
+                  >
+                    <ArrowLeftRight size={16} />
+                  </button>
+                  <button
+                    onClick={() => removeExercise(ei)}
                     className="w-8 h-8 grid place-items-center text-fg-subtle"
                     aria-label={`Remove ${ex.name}`}
                   >
@@ -730,6 +866,7 @@ export function Train() {
                     haptics.tap();
                     addSet(ei);
                   }}
+                  data-coach="add-set"
                   className="flex items-center gap-1 text-[13px] font-semibold text-accent"
                 >
                   <Plus size={15} /> Add set
@@ -748,6 +885,11 @@ export function Train() {
               </div>
             </Card>
           );
+                  })}
+                </div>
+              )}
+            </div>
+          );
         })}
       </div>
 
@@ -755,7 +897,14 @@ export function Train() {
         <Plus size={16} /> Add exercise
       </Button>
 
-      <Button variant="accent" size="lg" fullWidth className="mt-3" onClick={() => { haptics.warn(); setConfirmEnd(true); }}>
+      <Button
+        variant="accent"
+        size="lg"
+        fullWidth
+        className="mt-3"
+        data-coach="finish-workout"
+        onClick={() => { haptics.warn(); setConfirmEnd(true); }}
+      >
         Finish workout
       </Button>
 
@@ -770,6 +919,19 @@ export function Train() {
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onPick={addExercise}
+        exclude={session.exercises.map((e) => e.name)}
+      />
+      <ExercisePicker
+        open={replacingEi != null}
+        onClose={() => setReplacingEi(null)}
+        mode="replace"
+        replacing={replacingEi != null ? session.exercises[replacingEi]?.name : undefined}
+        onPick={(name) => {
+          if (replacingEi == null) return;
+          replaceExercise(replacingEi, name);
+          useUI.getState().toast({ message: `Swapped to ${name}`, tone: 'success' });
+          setReplacingEi(null);
+        }}
         exclude={session.exercises.map((e) => e.name)}
       />
       {/* Both end buttons route through this confirm so nobody ends a session by accident. */}
