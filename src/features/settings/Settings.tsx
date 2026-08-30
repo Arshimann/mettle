@@ -73,21 +73,19 @@ export function Settings() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useUI((s) => s.toast);
 
-  const flash = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2200);
-  };
+  const flash = (msg: string, tone: 'neutral' | 'success' | 'danger' = 'neutral') =>
+    toast({ message: msg, tone });
 
   const onImportFile = async (file: File) => {
     const text = await file.text();
     if (importData(text)) {
       haptics.success();
-      flash('Data imported');
+      flash('Data imported', 'success');
     } else {
       haptics.warn();
-      flash('Could not read that file');
+      flash('Could not read that file', 'danger');
     }
   };
 
@@ -267,7 +265,7 @@ export function Settings() {
             <Button
               onClick={() => {
                 download(`mettle-backup-${new Date().toISOString().slice(0, 10)}.json`, exportData());
-                flash('Backup downloaded');
+                flash('Backup downloaded', 'success');
               }}
             >
               <Download size={16} /> Export
@@ -300,7 +298,7 @@ export function Settings() {
               useSocial.getState().wipePublished();
               setConfirmReset(false);
               haptics.warn();
-              flash('All workout data cleared');
+              flash('All workout data cleared', 'danger');
             }}
           >
             <Trash2 size={16} /> {confirmReset ? 'Tap again to confirm' : 'Reset all data'}
@@ -339,12 +337,6 @@ export function Settings() {
           )}
           <InstallSheet open={installOpen} onClose={() => setInstallOpen(false)} />
         </>
-      )}
-
-      {toast && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-[100px] z-50 bg-fg text-canvas text-sm font-medium px-4 py-2.5 rounded-btn shadow-pop">
-          {toast}
-        </div>
       )}
     </div>
   );

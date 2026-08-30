@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Calculator, Check, ChevronRight, Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeftRight, Award, Calculator, Check, ChevronDown, ChevronRight, Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button, Card, CardLabel, EmptyState, PageHeader, PressableCard, Sheet, Stepper } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { EditDaySheet } from './EditDaySheet';
@@ -17,8 +17,8 @@ import { distanceLabel, fmtWeight, fromKg, loadIncrement, paceLabel, toKm, unitL
 import { sessionVolume, stalledExercises } from '../../lib/formulas';
 import { sfxFanfare, sfxSetDone, sfxSparkle } from '../../lib/sound';
 import { quoteForCount } from '../../data/quotes';
-import { EXERCISE_LIBRARY } from '../../data/exercises';
 import { fmtDuration } from '../../lib/date';
+import { cardioNames, groupExercises } from '../../lib/exerciseGroups';
 import { RestTimer } from './RestTimer';
 import { FinishSheet } from './FinishSheet';
 import { ExerciseTools } from './ExerciseTools';
@@ -142,6 +142,7 @@ export function Train() {
   const navigate = useUI((s) => s.navigate);
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [replacingEi, setReplacingEi] = useState<number | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [celebration, setCelebration] = useState<EndSessionResult | null>(null);
@@ -168,16 +169,30 @@ export function Train() {
   };
   const [tools, setTools] = useState<{ ei: number; name: string; target: number } | null>(null);
   const [flashReps, setFlashReps] = useState<{ ei: number; si: number } | null>(null);
+  // Only ever holds an explicit choice. Unset means "follow the default", which
+  // is what makes a finished group fold itself away without a syncing effect —
+  // and once you reopen one, the stored `false` keeps it open.
+  // Per-session by design: a group left collapsed across a reload would hide
+  // work you still have to do.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [nowTick, setNowTick] = useState(() => Date.now());
 
   // Cardio exercises log minutes/distance instead of weight×reps.
   const customExercises = useStore((s) => s.customExercises);
-  const cardioNames = useMemo(() => {
-    const set = new Set<string>();
-    EXERCISE_LIBRARY.forEach((e) => { if (e.group === 'Cardio') set.add(e.name.toLowerCase()); });
-    customExercises.forEach((e) => { if (e.group === 'Cardio') set.add(e.name.toLowerCase()); });
-    return set;
-  }, [customExercises]);
+  const cardio = useMemo(() => cardioNames(customExercises), [customExercises]);
+
+  // Rows carry their index in session.exercises. Every mutation on this screen
+  // is index-based, so grouping must not renumber anything — bucket the pairs,
+  // never the exercises alone.
+  const grouped = useMemo(
+    () =>
+      groupExercises(
+        (session?.exercises ?? []).map((ex, ei) => ({ ex, ei })),
+        (row) => row.ex.name,
+        customExercises,
+      ),
+    [session?.exercises, customExercises],
+  );
 
   useEffect(() => {
     if (!session) return;
@@ -366,8 +381,37 @@ export function Train() {
       ),
     }));
 
-  const removeExercise = (ei: number) =>
+  const removeExercise = (ei: number) => {
+    const removed = session.exercises[ei];
+    if (!removed) return;
     update((s) => ({ ...s, exercises: s.exercises.filter((_, i) => i !== ei) }));
+    haptics.warn();
+    // Sets may already be logged against it, so a mis-tap on the bin is a real
+    // loss. The row is right here — offering it back costs nothing.
+    useUI.getState().toast({
+      message: `${removed.name} removed`,
+      tone: 'danger',
+      action: {
+        label: 'Undo',
+        onPress: () =>
+          update((s) => ({
+            ...s,
+            exercises: [...s.exercises.slice(0, ei), removed, ...s.exercises.slice(ei)],
+          })),
+      },
+    });
+  };
+
+  /** Swap the movement, keep the sets. The "Last ..." line and the suggested
+   *  load are derived from history by name, so they re-resolve on the next
+   *  render — but targetReps came from the split and described the old lift. */
+  const replaceExercise = (ei: number, name: string) =>
+    update((s) => ({
+      ...s,
+      exercises: s.exercises.map((ex, i) =>
+        i !== ei ? ex : { ...ex, name, targetReps: undefined },
+      ),
+    }));
 
   const addExercise = (name: string) =>
     update((s) => ({ ...s, exercises: [...s.exercises, { name, sets: [{ weight: '', reps: '', done: false }] }] }));
@@ -396,7 +440,7 @@ export function Train() {
     const cur = exercise?.sets[si];
     if (!cur) return;
     const becameDone = !cur.done;
-    const isCardio = cardioNames.has(exercise.name.toLowerCase());
+    const isCardio = cardio.has(exercise.name.toLowerCase());
 
     // Honest logging: cardio needs real minutes, to-failure needs real reps —
     // block completion and flag the field instead of guessing.
@@ -491,9 +535,42 @@ export function Train() {
         </div>
       </Card>
 
-      <div className="space-y-3">
-        {session.exercises.map((ex, ei) => {
-          const isCardio = cardioNames.has(ex.name.toLowerCase());
+      <div className="space-y-5">
+        {grouped.map(({ group, items }) => {
+          const groupSets = items.reduce((n, r) => n + r.ex.sets.length, 0);
+          const groupDone = items.reduce((n, r) => n + r.ex.sets.filter((st) => st.done).length, 0);
+          const complete = groupSets > 0 && groupDone === groupSets;
+          // Default: a group with every set ticked gets out of the way.
+          const isShut = collapsed[group] ?? complete;
+          return (
+            <div key={group}>
+              <button
+                onClick={() => {
+                  haptics.tap();
+                  setCollapsed((c) => ({ ...c, [group]: !isShut }));
+                }}
+                aria-expanded={!isShut}
+                className="w-full flex items-center gap-2 px-0.5 pb-2"
+              >
+                <ChevronDown
+                  size={13}
+                  className={cn(
+                    'text-fg-subtle transition-transform shrink-0',
+                    isShut && '-rotate-90',
+                  )}
+                />
+                <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-fg-subtle">
+                  {group}
+                </span>
+                {complete && <Check size={13} className="text-accent shrink-0" strokeWidth={3} />}
+                <span className="ml-auto text-[11px] font-semibold text-fg-subtle tabular">
+                  {groupDone}/{groupSets} sets
+                </span>
+              </button>
+              {!isShut && (
+                <div className="space-y-3">
+                  {items.map(({ ex, ei }) => {
+          const isCardio = cardio.has(ex.name.toLowerCase());
           const lp = isCardio ? null : lastPerformance(history, ex.name);
           const suggestKg = isCardio ? null : suggestNextKg(history, ex.name, units);
           const weightPlaceholder = suggestKg != null ? String(fmtWeight(suggestKg, units)) : '0';
@@ -551,7 +628,14 @@ export function Train() {
                     </button>
                   )}
                   <button
-                    onClick={() => { haptics.tap(); removeExercise(ei); }}
+                    onClick={() => { haptics.tap(); setReplacingEi(ei); }}
+                    className="w-8 h-8 grid place-items-center text-fg-subtle"
+                    aria-label={`Swap ${ex.name}`}
+                  >
+                    <ArrowLeftRight size={16} />
+                  </button>
+                  <button
+                    onClick={() => removeExercise(ei)}
                     className="w-8 h-8 grid place-items-center text-fg-subtle"
                     aria-label={`Remove ${ex.name}`}
                   >
@@ -748,6 +832,11 @@ export function Train() {
               </div>
             </Card>
           );
+                  })}
+                </div>
+              )}
+            </div>
+          );
         })}
       </div>
 
@@ -770,6 +859,19 @@ export function Train() {
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onPick={addExercise}
+        exclude={session.exercises.map((e) => e.name)}
+      />
+      <ExercisePicker
+        open={replacingEi != null}
+        onClose={() => setReplacingEi(null)}
+        mode="replace"
+        replacing={replacingEi != null ? session.exercises[replacingEi]?.name : undefined}
+        onPick={(name) => {
+          if (replacingEi == null) return;
+          replaceExercise(replacingEi, name);
+          useUI.getState().toast({ message: `Swapped to ${name}`, tone: 'success' });
+          setReplacingEi(null);
+        }}
         exclude={session.exercises.map((e) => e.name)}
       />
       {/* Both end buttons route through this confirm so nobody ends a session by accident. */}

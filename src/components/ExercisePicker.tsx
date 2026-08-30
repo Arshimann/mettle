@@ -5,20 +5,32 @@ import { cn } from '../lib/cn';
 import { haptics } from '../lib/haptics';
 import { useStore } from '../store/useStore';
 import { EXERCISE_LIBRARY, MUSCLE_GROUPS, type MuscleGroup } from '../data/exercises';
+import { regionsFor } from '../data/muscleMap';
+import { groupOf } from '../lib/exerciseGroups';
 
-/** Searchable exercise picker. Stays open after a pick so several can be added;
- *  already-added names (via `exclude`) show as "Added". Custom exercises are
- *  saved to the library (starred) so they're pickable forever after. */
+/** Searchable exercise picker. In 'add' mode it stays open after a pick so
+ *  several can be added; already-added names (via `exclude`) show as "Added".
+ *  Custom exercises are saved to the library (starred) so they're pickable
+ *  forever after.
+ *
+ *  In 'replace' mode it swaps one movement for another, so it closes on pick
+ *  and leads with movements that train the same thing — the moment you ask for
+ *  a substitute is exactly when a shortlist is worth something. */
 export function ExercisePicker({
   open,
   onClose,
   onPick,
   exclude = [],
+  mode = 'add',
+  replacing,
 }: {
   open: boolean;
   onClose: () => void;
   onPick: (name: string) => void;
   exclude?: string[];
+  mode?: 'add' | 'replace';
+  /** The movement being replaced. Names the sheet and seeds the shortlist. */
+  replacing?: string;
 }) {
   const customExercises = useStore((s) => s.customExercises);
   const addCustomExercise = useStore((s) => s.addCustomExercise);
@@ -54,9 +66,36 @@ export function ExercisePicker({
   const showCustom =
     customName.length > 0 && !all.some((e) => e.name.toLowerCase() === customName.toLowerCase());
 
+  /** Movements sharing the replaced lift's primary region, best overlap first.
+   *  Costs nothing to build — the region resolver already covers customs. */
+  const similar = useMemo(() => {
+    if (mode !== 'replace' || !replacing) return [];
+    const mine = regionsFor(replacing, groupOf(replacing, customExercises) ?? undefined);
+    const primary = (Object.entries(mine) as [string, number][])
+      .sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (!primary) return [];
+    const lower = replacing.toLowerCase();
+    return all
+      .filter((e) => e.name.toLowerCase() !== lower && !excludeSet.has(e.name.toLowerCase()))
+      .map((e) => {
+        const theirs = regionsFor(e.name, e.group) as Record<string, number>;
+        let overlap = 0;
+        for (const [region, weight] of Object.entries(mine) as [string, number][]) {
+          overlap += Math.min(weight, theirs[region] ?? 0);
+        }
+        return { e, primaryScore: theirs[primary] ?? 0, overlap };
+      })
+      .filter((x) => x.primaryScore > 0)
+      .sort((a, b) => b.primaryScore - a.primaryScore || b.overlap - a.overlap)
+      .slice(0, 5)
+      .map((x) => x.e);
+  }, [mode, replacing, all, excludeSet, customExercises]);
+
   const pick = (name: string) => {
     haptics.select();
     onPick(name);
+    // Replacing is a single decision — staying open would be a second prompt.
+    if (mode === 'replace') onClose();
   };
 
   /** Save a new custom exercise under `g`, then pick it. */
@@ -75,7 +114,11 @@ export function ExercisePicker({
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="Add exercise">
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={mode === 'replace' && replacing ? `Replace ${replacing}` : 'Add exercise'}
+    >
       <div className="relative mb-3">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-subtle" />
         <input
@@ -131,6 +174,25 @@ export function ExercisePicker({
                 className="px-3 h-9 rounded-full text-[13px] font-semibold border border-border bg-canvas text-fg"
               >
                 {g}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {similar.length > 0 && !q && (
+        <div className="mb-3">
+          <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-fg-subtle mb-1.5 px-0.5">
+            Similar movements
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {similar.map((e) => (
+              <button
+                key={e.name}
+                onClick={() => pick(e.name)}
+                className="px-3 h-9 rounded-full text-[13px] font-semibold border border-accent/45 bg-accent-soft text-accent"
+              >
+                {e.name}
               </button>
             ))}
           </div>

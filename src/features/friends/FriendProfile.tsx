@@ -19,6 +19,7 @@ import {
   setReaction,
 } from '../../lib/social';
 import { useSocial } from '../../store/useSocial';
+import { useUI } from '../../store/useUI';
 import { useStore } from '../../store/useStore';
 import { EXERCISE_LIBRARY } from '../../data/exercises';
 import type { FriendProfileData, FriendWorkout, WorkoutReaction } from '../../types/social';
@@ -55,7 +56,7 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
   const [checkIns, setCheckIns] = useState<PhysiquePost[]>([]);
   const [photo, setPhoto] = useState<PhysiquePost | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useUI((s) => s.toast);
 
   const loadReactions = useCallback(
     async (keys: string[]) => {
@@ -94,10 +95,7 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
     };
   }, [friendId, loadReactions]);
 
-  const flash = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2200);
-  };
+  const flash = (msg: string) => toast({ message: msg, tone: 'neutral' });
 
   // Their check-in thumbnails live in a private bucket, so they need signing.
   const checkInUrls = useSignedUrls(checkIns.map((c) => c.thumbPath));
@@ -275,7 +273,8 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
               </div>
             </Card>
           </motion.div>
-        )}
+        )}
+
         {/* check-ins */}
         <motion.div variants={listItem} className="space-y-2.5">
           <CardLabel className="mb-0 px-0.5">Check-ins</CardLabel>
@@ -430,12 +429,6 @@ export function FriendProfile({ friendId, onBack }: { friendId: string; onBack: 
             remove: (id) => deleteComment(id),
           }}
         />
-      )}
-
-      {toast && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-[100px] z-50 bg-fg text-canvas text-sm font-medium px-4 py-2.5 rounded-btn shadow-pop">
-          {toast}
-        </div>
       )}
     </div>
   );

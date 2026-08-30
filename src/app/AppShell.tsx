@@ -14,6 +14,7 @@ import { Screen } from './Screen';
 import { UpdatePrompt } from '../features/system/UpdatePrompt';
 import { WhatsNew } from '../features/system/WhatsNew';
 import { AchievementUnlock } from '../features/system/AchievementUnlock';
+import { Toaster } from '../features/system/Toaster';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { Split } from '../features/split/Split';
 import { Train } from '../features/train/Train';
@@ -212,6 +213,7 @@ export function AppShell() {
       <WhatsNew />
 
       <AchievementUnlock />
+      <Toaster />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { uid } from '../lib/id';
 
 export type ScreenId =
   | 'home'
@@ -15,6 +16,28 @@ type Tab = Exclude<ScreenId, 'settings'>;
 
 /** Tab order used to derive transition direction (settings is not a tab). */
 export const SCREEN_ORDER: Tab[] = ['home', 'train', 'split', 'learn', 'stretch', 'progress', 'friends', 'you'];
+
+export type ToastTone = 'neutral' | 'success' | 'danger';
+
+/**
+ * A transient message. Raised from anywhere — a store action, a screen, a
+ * fire-and-forget publish — which is why these live here rather than in the
+ * component that happens to be on screen when one is triggered.
+ */
+export interface Toast {
+  id: string;
+  message: string;
+  tone: ToastTone;
+  /** Optional single action, e.g. Undo. Dismisses the toast when pressed. */
+  action?: { label: string; onPress: () => void };
+  /** Milliseconds on screen. Default 2600. */
+  duration?: number;
+  /** Play a sound as it lands. Most toasts should stay silent. */
+  sound?: 'pop' | 'notify';
+}
+
+/** Beyond this a burst of toasts stops informing and starts building a wall. */
+const MAX_TOASTS = 3;
 
 interface UIState {
   screen: ScreenId;
@@ -46,6 +69,8 @@ interface UIState {
    * renders whatever is pending.
    */
   intro: string | null;
+  /** Live transient messages, oldest first. Capped at MAX_TOASTS. */
+  toasts: Toast[];
   navigate: (screen: ScreenId, params?: Record<string, unknown>) => void;
   back: () => void;
   pushOverlay: () => void;
@@ -56,6 +81,8 @@ interface UIState {
   setCinematic: (on: boolean) => void;
   startIntro: (dayName: string) => void;
   endIntro: () => void;
+  toast: (t: Omit<Toast, 'id'>) => void;
+  dismissToast: (id: string) => void;
 }
 
 /** Ephemeral navigation state (not persisted). */
@@ -69,6 +96,7 @@ export const useUI = create<UIState>((set, get) => ({
   unlockedQueue: [],
   cinematic: false,
   intro: null,
+  toasts: [],
   navigate: (screen, params = {}) => {
     const cur = get().screen;
     const a = SCREEN_ORDER.indexOf(cur as never);
@@ -86,5 +114,8 @@ export const useUI = create<UIState>((set, get) => ({
   setCinematic: (on) => set({ cinematic: on }),
   startIntro: (dayName) => set({ intro: dayName }),
   endIntro: () => set({ intro: null }),
+  toast: (t) =>
+    set((s) => ({ toasts: [...s.toasts, { ...t, id: uid() }].slice(-MAX_TOASTS) })),
+  dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }));
 
