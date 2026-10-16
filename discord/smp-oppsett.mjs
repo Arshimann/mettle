@@ -6,6 +6,8 @@
 
 import readline from 'node:readline/promises';
 import process from 'node:process';
+import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const API = process.env.DISCORD_API ?? 'https://discord.com/api/v10';
 
@@ -20,6 +22,7 @@ const P = {
   EMBED: 1n << 14n,
   ATTACH: 1n << 15n,
   HISTORY: 1n << 16n,
+  MENTION_EVERYONE: 1n << 17n,
   CONNECT: 1n << 20n,
   SPEAK: 1n << 21n,
   PUBLIC_THREADS: 1n << 35n,
@@ -46,6 +49,10 @@ const PLAN = [
       { name: '📡・server-ip', type: TEXT, topic: 'Server-IP, versjon og port.', message: 'serverIp' },
       { name: '📜・de-fem-bud', type: TEXT, topic: 'Reglene på serveren.', message: 'regler' },
       { name: '📢・kunngjøringer', type: TEXT, topic: 'Viktige oppdateringer, events og endringer på serveren.' },
+      { name: '🟢・status', type: TEXT, topic: 'Varsel når Minecraft-serveren starter og stopper.', status: true },
+      // Community-servere må ha en kanal der Discord sender varsler til admins. Den er skjult
+      // for @everyone, så vanlige medlemmer ser den aldri.
+      { name: '🛠・mod-varsler', type: TEXT, topic: 'Varsler fra Discord til admins. Bare admins ser denne kanalen.', private: true },
     ],
   },
   {
@@ -76,6 +83,20 @@ const PLAN = [
   },
 ];
 
+// Roller medlemmene velger selv under "Kanaler og roller". De gir ingen ekstra rettigheter;
+// alt kommer fra @everyone. 🔔 har ingen farge, ellers ville nesten alle fått samme navnefarge.
+const ROLES = [
+  { key: 'varsel', name: '🔔 Server-varsel', color: 0, emoji: '🔔', title: 'Server-varsel', description: 'Få ping når Minecraft-serveren er online' },
+  { key: 'miner', name: '⛏️ Miner', color: 0x95a5a6, emoji: '⛏️', title: 'Miner', description: 'Graving, ores og ressurser' },
+  { key: 'builder', name: '🏗️ Builder', color: 0xe67e22, emoji: '🏗️', title: 'Builder', description: 'Bygging og design' },
+  { key: 'pvp', name: '⚔️ PvP', color: 0xe74c3c, emoji: '⚔️', title: 'PvP', description: 'Kamp, raids og kriger' },
+  { key: 'chill', name: '😎 Chill', color: 0x3498db, emoji: '😎', title: 'Chill', description: 'Her for å slappe av' },
+];
+
+// Status-boten (DiscordSRV på Aternos) er en egen bot uten admin, fordi tokenet dens ligger i
+// serverfilene på Aternos. Den trenger bare å se, skrive og pinge rollen i 🟢・status.
+const STATUS_BOT_PERMS = P.VIEW | P.SEND | P.HISTORY | P.MENTION_EVERYONE;
+
 const IP_PLACEHOLDER = 'DIN-IP-HER';
 const VERSION_PLACEHOLDER = 'DIN-VERSJON-HER';
 
@@ -93,6 +114,8 @@ const MESSAGES = {
       'Allianser, kriger, handel, bounties og svik er en del av serveren.',
       '',
       `Les <#${ids['📜・de-fem-bud']}> før du begynner å spille.`,
+      '',
+      'Velg roller og server-varsel under **Kanaler og roller** øverst i kanallista.',
     ].join('\n'),
   },
   serverIp: {
@@ -251,6 +274,7 @@ const core = (s) => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu
 // Uten dette ville skriptet forsøkt å gi nytt navn hver gang og kræsjet inn i rate limiten.
 const sameName = (a, b) => a.replace(/️/g, '').toLowerCase() === b.replace(/️/g, '').toLowerCase();
 
+// @everyone-rollen har samme id som serveren, så dette brukes også for andre roller.
 function setEveryone(overwrites, guildId, { allow = 0n, deny = 0n, unDeny = 0n }) {
   const list = (overwrites ?? []).map((o) => ({ id: o.id, type: o.type, allow: String(o.allow), deny: String(o.deny) }));
   let ow = list.find((o) => o.id === guildId);
@@ -383,15 +407,18 @@ async function main() {
 
     for (const ch of cat.channels) {
       const need = ch.type === VOICE ? VOICE_NEEDS : CHAT_NEEDS;
-      const ow = cat.readOnly
-        ? { allow: READ_ONLY_ALLOW, deny: READ_ONLY_DENY }
-        : { unDeny: need };
+      const ow = ch.private
+        ? { deny: P.VIEW }
+        : cat.readOnly
+          ? { allow: READ_ONLY_ALLOW, deny: READ_ONLY_DENY }
+          : { unDeny: need };
       let channel = findExisting(ch.name, ch.type, category.id);
 
       if (!channel) {
         // Ny kanal får samme overwrites som kategorien, så den står som "synket" i Discord
-        // og du kan styre hele kategorien ett sted.
-        const body = { name: ch.name, type: ch.type, parent_id: category.id, permission_overwrites: category.permission_overwrites ?? [] };
+        // og du kan styre hele kategorien ett sted. Unntaket er den skjulte mod-kanalen.
+        const { list } = setEveryone(category.permission_overwrites, guildId, ow);
+        const body = { name: ch.name, type: ch.type, parent_id: category.id, permission_overwrites: list };
         if (ch.topic) body.topic = ch.topic;
         if (ch.slowmode) body.rate_limit_per_user = ch.slowmode;
         channel = await api('POST', `/guilds/${guildId}/channels`, body);
@@ -438,6 +465,108 @@ async function main() {
   if (positions.some((p) => current.get(p.id) !== p.position)) {
     await api('PATCH', `/guilds/${guildId}/channels`, positions);
     console.log('   ↕ Rekkefølgen er satt');
+  }
+
+  // ── Roller ──
+  console.log('\n🎭 Roller');
+  let guildRoles = await api('GET', `/guilds/${guildId}/roles`);
+  const roleIds = {};
+  for (const r of ROLES) {
+    let role = guildRoles.find((x) => !x.managed && core(x.name ?? '') === core(r.name));
+    if (!role) {
+      role = await api('POST', `/guilds/${guildId}/roles`, { name: r.name, color: r.color, permissions: '0', hoist: false, mentionable: false });
+      console.log(`   + ${r.name}`);
+    } else {
+      console.log(`   = ${role.name} (fantes allerede)`);
+    }
+    roleIds[r.key] = role.id;
+  }
+
+  // ── Community + rollevalg ──
+  // "Kanaler og roller" finnes bare på Community-servere. Community krever at medlemmer har
+  // bekreftet e-post (verifiseringsnivå Lav) og at bildefilteret gjelder alle.
+  console.log('\n🧭 Kanaler og roller');
+  const fresh = await api('GET', `/guilds/${guildId}`);
+  let community = fresh.features.includes('COMMUNITY');
+  if (!community) {
+    try {
+      await api('PATCH', `/guilds/${guildId}`, {
+        features: [...fresh.features, 'COMMUNITY'],
+        verification_level: Math.max(fresh.verification_level, 1),
+        explicit_content_filter: 2,
+        rules_channel_id: ids['📜・de-fem-bud'],
+        public_updates_channel_id: ids['🛠・mod-varsler'],
+      });
+      community = true;
+      console.log('   ✅ Serveren er nå en Community-server');
+    } catch (e) {
+      console.log(`   ⚠️  Kunne ikke slå på Community: ${e.message}`);
+    }
+  } else {
+    console.log('   = Community er allerede på');
+  }
+
+  if (community) {
+    // PUT erstatter hele oppsettet, så det sendes bare hvis rollevalget ikke er satt opp fra
+    // før. Da overlever endringer du gjør selv i Discord.
+    const current = await api('GET', `/guilds/${guildId}/onboarding`).catch(() => null);
+    if (current?.enabled && current.prompts?.length) {
+      console.log('   = Rollevalget er allerede satt opp (endres ikke)');
+    } else {
+      const option = (r) => ({ title: r.title, description: r.description, emoji_name: r.emoji, role_ids: [roleIds[r.key]], channel_ids: [] });
+      const prompt = (id, title, keys) => ({
+        id: String(id), type: 0, title, single_select: false, required: false, in_onboarding: true,
+        options: ROLES.filter((r) => keys.includes(r.key)).map(option),
+      });
+      // Alle offentlige kanaler er standardkanaler; ellers ville nye medlemmer ikke sett dem.
+      const defaults = PLAN.flatMap((c) => c.channels).filter((c) => !c.private).map((c) => c.id);
+      try {
+        await api('PUT', `/guilds/${guildId}/onboarding`, {
+          prompts: [
+            prompt(0, 'Vil du få ping når serveren er online?', ['varsel']),
+            prompt(1, 'Hva slags spiller er du?', ['miner', 'builder', 'pvp', 'chill']),
+          ],
+          default_channel_ids: defaults,
+          enabled: true,
+          mode: 0,
+        });
+        console.log('   ✅ Rollevalg lagt inn under "Kanaler og roller"');
+      } catch (e) {
+        console.log(`   ⚠️  Kunne ikke sette opp rollevalget: ${e.message}`);
+      }
+    }
+  }
+
+  // ── Status-boten ──
+  // 🟢・status er read-only for @everyone, så status-boten trenger egen tillatelse der. Botens
+  // automatiske rolle (den som får samme navn som boten) får den.
+  console.log('\n🟢 Status-bot');
+  const statusId = ids['🟢・status'];
+  const otherBotRoles = async () =>
+    (await api('GET', `/guilds/${guildId}/roles`)).filter((r) => r.tags?.bot_id && r.tags.bot_id !== me.id);
+  let botRoles = await otherBotRoles();
+  if (!botRoles.length) {
+    const appId = (await ask('   Application ID til status-boten (Enter = hopp over): ', 'STATUS_BOT_ID')).trim();
+    if (appId) {
+      console.log('\n   Åpne denne lenken, velg serveren og godkjenn:\n');
+      console.log(`   https://discord.com/oauth2/authorize?client_id=${appId}&permissions=${STATUS_BOT_PERMS}&scope=bot\n`);
+      if (rl) await rl.question('   Trykk Enter når status-boten er lagt til… ');
+      botRoles = await otherBotRoles();
+    }
+  }
+  if (!botRoles.length) {
+    console.log('   Ingen status-bot funnet ennå. Kjør scriptet igjen når du har laget den.');
+  } else {
+    const ch = (await api('GET', `/guilds/${guildId}/channels`)).find((c) => c.id === statusId);
+    let overwrites = ch.permission_overwrites;
+    let changed = false;
+    for (const r of botRoles) {
+      const res = setEveryone(overwrites, r.id, { allow: STATUS_BOT_PERMS });
+      overwrites = res.list;
+      changed ||= res.changed;
+    }
+    if (changed) await api('PATCH', `/channels/${statusId}`, { permission_overwrites: overwrites });
+    console.log(`   ✅ ${botRoles.map((r) => r.name).join(', ')} kan poste og pinge i 🟢・status`);
   }
 
   // Meldinger. Bot-meldinger kan bare redigeres av boten selv, så IP og versjon spørres om
@@ -513,6 +642,44 @@ async function main() {
   if (afkId && guild.afk_channel_id !== afkId) {
     await api('PATCH', `/guilds/${guildId}`, { afk_channel_id: afkId });
     console.log('\n💤 💤・AFK er satt som serverens AFK-kanal');
+  }
+
+  // DiscordSRV-oppsett med riktige ID-er, klart til å lime inn på Aternos.
+  const srv = [
+    'DISCORDSRV-OPPSETT FOR ATERNOS',
+    '==============================',
+    '',
+    'Fil: plugins/DiscordSRV/config.yml',
+    'Finn hver linje under og erstatt den (behold resten av filen som den er):',
+    '',
+    'BotToken: "LIM-INN-TOKENET-TIL-STATUS-BOTEN-HER"',
+    `Channels: {"status": "${statusId}"}`,
+    'DiscordChatChannelDiscordToMinecraft: false',
+    'DiscordChatChannelMinecraftToDiscord: false',
+    'DiscordChatChannelAllowedMentions: [user, channel, emote, role]',
+    'DiscordConsoleChannelId: ""',
+    '',
+    'Fil: plugins/DiscordSRV/messages.yml',
+    'Erstatt disse to linjene:',
+    '',
+    `DiscordChatChannelServerStartupMessage: "🟢 **Serveren er online!** <@&${roleIds.varsel}>"`,
+    'DiscordChatChannelServerShutdownMessage: "🔴 **Serveren er offline.**"',
+    '',
+    'Og sett "Enabled: true" til "Enabled: false" rett under hver av disse fire',
+    '(ellers havner join-, leave-, døds- og advancement-meldinger i status-kanalen):',
+    '',
+    'MinecraftPlayerJoinMessage:',
+    'MinecraftPlayerLeaveMessage:',
+    'MinecraftPlayerDeathMessage:',
+    'MinecraftPlayerAchievementMessage:',
+    '',
+  ].join('\n');
+  const srvFile = new URL('./discordsrv-oppsett.txt', import.meta.url);
+  try {
+    writeFileSync(srvFile, srv);
+    console.log(`\n📄 DiscordSRV-oppsettet er lagret i ${fileURLToPath(srvFile)}`);
+  } catch {
+    console.log(`\n📄 DiscordSRV-oppsett:\n\n${srv}`);
   }
 
   // Advar hvis @everyone-rollen selv mangler grunnleggende rettigheter; det kan ikke kanal-
