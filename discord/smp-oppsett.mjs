@@ -55,10 +55,12 @@ const PLAN = [
       { name: '🎬・clips', type: TEXT, topic: 'Del clips og videoer fra serveren.' },
       { name: '📸・screenshots', type: TEXT, topic: 'Del builds, loot, morsomme øyeblikk og andre bilder fra SMP-en.' },
       { name: '😂・memes', type: TEXT, topic: 'Memes og shitposting.' },
-      { name: '💰・handel', type: TEXT, topic: 'Kjøp, selg og bytt items med andre spillere.' },
-      { name: '🎯・bounties', type: TEXT, topic: 'Sett dusør på andre spillere og tilby belønning til den som klarer å ta dem.' },
-      { name: '🕵️・etterlysninger', type: TEXT, topic: 'Etterlys spillere som har drept, stjålet fra eller raidet deg.' },
-      { name: '💡・forslag', type: TEXT, topic: 'Kom med forslag til ting som kan gjøre SMP-en bedre.' },
+      // slowmode er i sekunder. Handel får kortere cooldown enn resten fordi folk legitimt
+      // legger ut flere tilbud; forhandling skjer uansett i tråder, som ikke arver slowmode.
+      { name: '💰・handel', type: TEXT, topic: 'Kjøp, selg og bytt items med andre spillere.', message: 'handel', pin: true, slowmode: 15 * 60 },
+      { name: '🎯・bounties', type: TEXT, topic: 'Sett dusør på andre spillere og tilby belønning til den som klarer å ta dem.', message: 'bounties', pin: true, slowmode: 30 * 60 },
+      { name: '🕵️・etterlysninger', type: TEXT, topic: 'Etterlys spillere som har drept, stjålet fra eller raidet deg.', message: 'etterlysninger', pin: true, slowmode: 30 * 60 },
+      { name: '💡・forslag', type: TEXT, topic: 'Kom med forslag til ting som kan gjøre SMP-en bedre.', message: 'forslag', pin: true, slowmode: 30 * 60 },
     ],
   },
   {
@@ -132,6 +134,78 @@ const MESSAGES = {
       '✅ PvP',
       '✅ Raiding',
       '✅ Drap uten grunn',
+    ].join('\n'),
+  },
+  handel: {
+    key: '# 💰 HANDEL',
+    build: () => [
+      '# 💰 HANDEL',
+      '',
+      'SMP-en har sin egen økonomi. Her kjøper, selger og bytter du items med andre spillere.',
+      '',
+      '**Slik poster du**',
+      '• Skriv hva du selger eller ser etter, og hva du vil ha for det.',
+      '• Samle alt du har til salgs i én melding.',
+      '• Forhandle i en tråd under innlegget eller på DM, ikke i selve kanalen.',
+      '',
+      '**Husk**',
+      '• Handel skjer på egen risiko. Svik er en del av serveren.',
+      '• ⏳ 15 min cooldown mellom meldinger for å unngå spam.',
+    ].join('\n'),
+  },
+  bounties: {
+    key: '# 🎯 BOUNTIES',
+    build: ({ ids }) => [
+      '# 🎯 BOUNTIES',
+      '',
+      'Sett dusør på en spiller, og belønn den som klarer å ta dem.',
+      '',
+      '**Slik poster du**',
+      '• **Hvem:** spilleren det gjelder',
+      '• **Belønning:** hva du betaler',
+      '• **Krav:** hva som må til, f.eks. et drap eller et bestemt item',
+      '',
+      '**Husk**',
+      '• Krev inn dusøren med screenshot eller clip som bevis, i en tråd under bountyen.',
+      `• Spawnkilling teller ikke (bud II i <#${ids['📜・de-fem-bud']}>).`,
+      '• Dusøren betales av den som satte den. Ingen garanti: svik er en del av serveren.',
+      '• ⏳ 30 min cooldown mellom meldinger for å unngå spam.',
+    ].join('\n'),
+  },
+  etterlysninger: {
+    key: '# 🕵️ ETTERLYSNINGER',
+    build: ({ ids }) => [
+      '# 🕵️ ETTERLYSNINGER',
+      '',
+      'Har noen drept deg, stjålet fra deg eller raidet basen din? Etterlys dem her.',
+      '',
+      '**Slik poster du**',
+      '• **Hvem:** navnet, hvis du vet det',
+      '• **Hva:** hva som skjedde, og omtrent hvor og når',
+      '• **Bevis:** screenshot eller clip, hvis du har det',
+      '',
+      '**Husk**',
+      '• PvP, griefing, stjeling og raiding er lov. Dette er for å advare andre, ikke for å klage.',
+      `• Brudd på <#${ids['📜・de-fem-bud']}> (X-Ray, cheats osv.) meldes direkte til en admin.`,
+      '• ⏳ 30 min cooldown mellom meldinger for å unngå spam.',
+    ].join('\n'),
+  },
+  forslag: {
+    key: '# 💡 FORSLAG',
+    build: () => [
+      '# 💡 FORSLAG',
+      '',
+      'Har du en idé som kan gjøre SMP-en bedre? Skriv den her.',
+      '',
+      '**Slik poster du**',
+      '• Ett forslag per melding.',
+      '• Forklar kort hva du vil ha, og hvorfor.',
+      '• Diskuter i en tråd under forslaget.',
+      '',
+      '**Stem**',
+      'Reager med 👍 eller 👎 på forslagene.',
+      '',
+      '⏳ 30 min cooldown mellom meldinger for å unngå spam.',
     ].join('\n'),
   },
 };
@@ -319,6 +393,7 @@ async function main() {
         // og du kan styre hele kategorien ett sted.
         const body = { name: ch.name, type: ch.type, parent_id: category.id, permission_overwrites: category.permission_overwrites ?? [] };
         if (ch.topic) body.topic = ch.topic;
+        if (ch.slowmode) body.rate_limit_per_user = ch.slowmode;
         channel = await api('POST', `/guilds/${guildId}/channels`, body);
         channels.push(channel);
         report.created.push(ch.name);
@@ -329,6 +404,8 @@ async function main() {
         if (channel.parent_id !== category.id) patch.parent_id = category.id;
         // Topic settes bare hvis kanalen ikke har en fra før, så egne endringer overlever.
         if (ch.topic && !channel.topic) patch.topic = ch.topic;
+        // Samme for slowmode: settes bare hvis kanalen ikke har noen, så du kan justere den selv.
+        if (ch.slowmode && !channel.rate_limit_per_user) patch.rate_limit_per_user = ch.slowmode;
         const { list, changed } = setEveryone(channel.permission_overwrites, guildId, ow);
         if (changed) patch.permission_overwrites = list;
         if (Object.keys(patch).length) {
@@ -366,9 +443,37 @@ async function main() {
   // Meldinger. Bot-meldinger kan bare redigeres av boten selv, så IP og versjon spørres om
   // her; kjør skriptet på nytt for å endre dem senere.
   console.log('\n📝 Infotekster');
-  const findMine = async (channelId, key) => {
+  // I kanaler folk skriver i havner botens melding fort lenger opp enn de 50 siste, så festede
+  // meldinger sjekkes først. Discord har to pin-endepunkter (nytt og gammelt); begge støttes.
+  const getPins = async (channelId) => {
+    try {
+      const res = await api('GET', `/channels/${channelId}/messages/pins?limit=50`);
+      return res.items.map((i) => i.message);
+    } catch (e) {
+      if (e.status !== 404) throw e;
+      return api('GET', `/channels/${channelId}/pins`);
+    }
+  };
+  const pin = async (channelId, messageId) => {
+    try {
+      await api('PUT', `/channels/${channelId}/messages/pins/${messageId}`);
+    } catch (e) {
+      if (e.status !== 404) throw e;
+      await api('PUT', `/channels/${channelId}/pins/${messageId}`);
+    }
+    // Fjern Discords "smpbot festet en melding"-varsel; det er bare støy i kanalen.
+    const recent = await api('GET', `/channels/${channelId}/messages?limit=10`);
+    const notice = recent.find((m) => m.type === 6 && m.author?.id === me.id);
+    if (notice) await api('DELETE', `/channels/${channelId}/messages/${notice.id}`).catch(() => {});
+  };
+  const findMine = async (channelId, key, pinned = false) => {
+    const isMine = (m) => m.author?.id === me.id && m.content.includes(key);
+    if (pinned) {
+      const hit = (await getPins(channelId)).find(isMine);
+      if (hit) return hit;
+    }
     const msgs = await api('GET', `/channels/${channelId}/messages?limit=50`);
-    return msgs.find((m) => m.author?.id === me.id && m.content.includes(key));
+    return msgs.find(isMine);
   };
   const ipChannel = ids['📡・server-ip'];
   const oldIp = await findMine(ipChannel, MESSAGES.serverIp.key);
@@ -385,15 +490,20 @@ async function main() {
       if (!ch.message) continue;
       const msg = MESSAGES[ch.message];
       const content = msg.build({ ids, ip, version });
-      const existing = ch.message === 'serverIp' ? oldIp : await findMine(ch.id, msg.key);
+      const existing = ch.message === 'serverIp' ? oldIp : await findMine(ch.id, msg.key, ch.pin);
+      let messageId = existing?.id;
       if (!existing) {
-        await api('POST', `/channels/${ch.id}/messages`, { content, allowed_mentions: { parse: [] } });
+        messageId = (await api('POST', `/channels/${ch.id}/messages`, { content, allowed_mentions: { parse: [] } })).id;
         console.log(`   + ${ch.name}: lagt inn`);
       } else if (existing.content !== content) {
         await api('PATCH', `/channels/${ch.id}/messages/${existing.id}`, { content, allowed_mentions: { parse: [] } });
         console.log(`   ~ ${ch.name}: oppdatert`);
       } else {
         console.log(`   = ${ch.name}: uendret`);
+      }
+      if (ch.pin && !existing?.pinned) {
+        await pin(ch.id, messageId);
+        console.log(`   📌 ${ch.name}: festet`);
       }
     }
   }
